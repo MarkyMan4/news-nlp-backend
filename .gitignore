@@ -139,3 +139,4 @@ cython_debug/
 
 .vscode
 secrets.txt
+secrets.json
