@@ -16,10 +16,11 @@ class SavedArticle(models.Model):
     article = models.ForeignKey(Article, on_delete=models.CASCADE)
 
 class TopicLkp(models.Model):
+    topic_id = models.IntegerField(unique=True)
     topic_name = models.CharField(max_length=50)
 
 class ArticleNlp(models.Model):
     article = models.ForeignKey(Article, on_delete=models.CASCADE)
-    topic = models.ForeignKey(TopicLkp, on_delete=models.CASCADE)
+    topic = models.ForeignKey(TopicLkp, to_field='topic_id', db_column='topic', on_delete=models.CASCADE)
     sentiment = models.DecimalField(max_digits=4, decimal_places=3)
     subjectivity = models.DecimalField(max_digits=4, decimal_places=3)
