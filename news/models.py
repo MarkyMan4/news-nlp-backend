@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 class Article(models.Model):
     post_id = models.CharField(max_length=10, null=True)
     post_title = models.CharField(max_length=400)
-    url = models.CharField(max_length=350)
+    url = models.CharField(max_length=500)
     score = models.IntegerField(null=True)
     publisher = models.CharField(max_length=50, null=True)
     headline = models.CharField(max_length=400)
