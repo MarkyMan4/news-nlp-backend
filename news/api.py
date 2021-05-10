@@ -13,15 +13,23 @@ from .models import Article, ArticleNlp
 #         return Article.objects.filter(pk=article_id)
 
 class ArticleViewSet(viewsets.ViewSet):
-    # def list(self, request):
-    #     article_queryset = Article.objects.all()
-    #     nlp_queryset = ArticleNlp.objects.all()
+    def list(self, request):
+        article_queryset = Article.objects.all()
+        # nlp_queryset = ArticleNlp.objects.all()
 
-    #     article_serializer = ArticleSerializer(article_queryset, many=True)
-    #     nlp_serializer = ArticleNlpSerializer(nlp_queryset, many=True)
+        article_serializer = ArticleSerializer(article_queryset, many=True)
+        # nlp_serializer = ArticleNlpSerializer(nlp_queryset, many=True)
 
-    #     serializer = ArticleNlpSerializer(queryset, many=True)
-    #     return Response(serializer.data)
+        response_data = article_serializer.data
+
+        # this seems ineffecient - has to do N queries where N is the number of articles 
+        # in the database. Need to find a better way to do this
+        for article in response_data:
+            nlp_queryset = ArticleNlp.objects.filter(article_id=article['id'])
+            nlp_serializer = ArticleNlpSerializer(nlp_queryset.first())
+            article['nlp'] = nlp_serializer.data
+
+        return Response(response_data)
 
     def retrieve(self, request, pk=None):
         # queries for article and NLP
