@@ -9,4 +9,5 @@ class ArticleSerializer(serializers.ModelSerializer):
 class ArticleNlpSerializer(serializers.ModelSerializer):
     class Meta:
         model = ArticleNlp
-        fields = ('article_id', 'sentiment', 'subjectivity', 'topic')
+        fields = ('sentiment', 'subjectivity', 'topic')
+
