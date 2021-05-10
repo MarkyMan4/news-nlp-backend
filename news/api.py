@@ -1,6 +1,7 @@
 from rest_framework import generics, permissions
 from rest_framework import viewsets, status
 from rest_framework.response import Response
+from django.shortcuts import get_object_or_404
 from .serializers import ArticleSerializer, ArticleNlpSerializer
 from .models import Article, ArticleNlp
 
@@ -36,9 +37,13 @@ class ArticleViewSet(viewsets.ViewSet):
         article_queryset = Article.objects.filter(pk=pk)
         nlp_queryset = ArticleNlp.objects.filter(article_id=pk)
 
+        # get objects for 404 from each queryset
+        article = get_object_or_404(article_queryset)
+        nlp = get_object_or_404(nlp_queryset)
+
         # create the serializers for each object
-        article_serializer = ArticleSerializer(article_queryset.first())
-        nlp_serializer = ArticleNlpSerializer(nlp_queryset.first())
+        article_serializer = ArticleSerializer(article)
+        nlp_serializer = ArticleNlpSerializer(nlp)
 
         # construct the response with the NLP as a nested object
         response_data = article_serializer.data
