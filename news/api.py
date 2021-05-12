@@ -7,6 +7,14 @@ from .models import Article, ArticleNlp
 
 
 class ArticleViewSet(viewsets.ViewSet):
+
+    # /api/article<optional query params>
+    # gets multiple articles along with some filtering
+    # optional query params:
+    #   1. publisher - specify publisher of articles
+    #   2. startDate - only returns articles that were published on or after this date
+    #   3. endDate - only returns articles that were published on or before this date
+    #       - note dates should be given in the format yyyy-mm-dd
     def list(self, request):
         article_queryset = Article.objects.all()
 
@@ -39,9 +47,9 @@ class ArticleViewSet(viewsets.ViewSet):
 
         return Response(response_data)
 
+    # /api/article/<article id>
+    # gets a specific news article
     def retrieve(self, request, pk=None):
-        if request.query_params:
-            print(request.query_params)
         # queries for article and NLP
         article_queryset = Article.objects.filter(pk=pk)
         nlp_queryset = ArticleNlp.objects.filter(article_id=pk)
