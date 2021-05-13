@@ -1,3 +1,4 @@
+from django.db.models import query
 from rest_framework import generics, permissions
 from rest_framework import viewsets, status
 from rest_framework.response import Response
@@ -15,23 +16,18 @@ class ArticleViewSet(viewsets.ViewSet):
     #   2. startDate - only returns articles that were published on or after this date
     #   3. endDate - only returns articles that were published on or before this date
     #       - note dates should be given in the format yyyy-mm-dd
+    #   4. topic - only return articles with specified topic
+    #   5. minSentiment - only return articles with sentiment greater than or equal to this value
+    #   6. maxSentiment - only return articles with sentiment less than or equal to this value
+    #   7. minSubjectivity - only return articles with subjectivity greater than or equal to this value
+    #   8. maxSubjectivity - only return articles with subjectivity less than or equal to this value
     def list(self, request):
         article_queryset = Article.objects.all()
 
         query_params = request.query_params
 
         # any filtering will be provided as query parameters
-        # TODO: figure out how to filter by topic, sentiment and subjectivity since this comes form article_nlp
-        if query_params.get('publisher'):
-            article_queryset = article_queryset.filter(publisher=query_params.get('publisher'))
-
-        # getting a warning here that these are naive datetimes, look into django.utils.datetime
-        if query_params.get('startDate'):
-            article_queryset = article_queryset.filter(date_published__gte=query_params.get('startDate'))
-
-        if query_params.get('endDate'):
-            article_queryset = article_queryset.filter(date_published__lte=query_params.get('endDate'))
-
+        article_queryset = self.filter_articles(article_queryset, query_params)
 
         article_serializer = ArticleSerializer(article_queryset, many=True)
         response_data = article_serializer.data
@@ -46,6 +42,35 @@ class ArticleViewSet(viewsets.ViewSet):
             article['nlp'] = nlp_serializer.data
 
         return Response(response_data)
+
+    # applies filtering to articles based on query params provided
+    def filter_articles(self, article_queryset, query_params):
+        if query_params.get('publisher'):
+            article_queryset = article_queryset.filter(publisher=query_params.get('publisher'))
+
+        # getting a warning here that these are naive datetimes, look into django.utils.datetime
+        if query_params.get('startDate'):
+            article_queryset = article_queryset.filter(date_published__gte=query_params.get('startDate'))
+
+        if query_params.get('endDate'):
+            article_queryset = article_queryset.filter(date_published__lte=query_params.get('endDate'))
+
+        if query_params.get('topic'):
+            article_queryset = article_queryset.filter(articlenlp__topic=query_params.get('topic'))
+
+        if query_params.get('minSentiment'):
+            article_queryset = article_queryset.filter(articlenlp__sentiment__gte=query_params.get('minSentiment'))
+
+        if query_params.get('maxSentiment'):
+            article_queryset = article_queryset.filter(articlenlp__sentiment__lte=query_params.get('maxSentiment'))
+
+        if query_params.get('minSubjectivity'):
+            article_queryset = article_queryset.filter(articlenlp__subjectivity__gte=query_params.get('minSubjectivity'))
+
+        if query_params.get('maxSubjectivity'):
+            article_queryset = article_queryset.filter(articlenlp__subjectivity__lte=query_params.get('maxSubjectivity'))
+
+        return article_queryset
 
     # /api/article/<article id>
     # gets a specific news article
