@@ -3,8 +3,8 @@ from rest_framework import generics, permissions
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
-from .serializers import ArticleSerializer, ArticleNlpSerializer
-from .models import Article, ArticleNlp
+from .serializers import ArticleSerializer, ArticleNlpSerializer, SavedArticleSerializer
+from .models import Article, ArticleNlp, SavedArticle
 
 
 class ArticleViewSet(viewsets.ViewSet):
@@ -93,4 +93,12 @@ class ArticleViewSet(viewsets.ViewSet):
         
         return Response(response_data)
 
+# ModelViewSet includes methods to get objects, create, edit and delete by default.
+# Need to refine this so users can only delete their own saved articles. Also need
+# to only allow get, post and delete. For get, users should only be able to retrieve 
+# their own saved articles.
+class SavedArticleViewset(viewsets.ModelViewSet):
+    serializer_class = SavedArticleSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    queryset = SavedArticle.objects.all()
 

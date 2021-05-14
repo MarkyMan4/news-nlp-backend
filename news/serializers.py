@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Article, ArticleNlp
+from .models import Article, ArticleNlp, SavedArticle
 
 class ArticleSerializer(serializers.ModelSerializer):
     class Meta:
@@ -11,3 +11,7 @@ class ArticleNlpSerializer(serializers.ModelSerializer):
         model = ArticleNlp
         fields = ('sentiment', 'subjectivity', 'topic')
 
+class SavedArticleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SavedArticle
+        fields = ('user', 'article')
