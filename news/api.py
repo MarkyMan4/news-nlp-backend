@@ -1,5 +1,5 @@
 from django.db.models import query
-from rest_framework import generics, permissions
+from rest_framework import generics, permissions, serializers
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
@@ -101,4 +101,9 @@ class SavedArticleViewset(viewsets.ModelViewSet):
     serializer_class = SavedArticleSerializer
     permission_classes = [permissions.IsAuthenticated]
     queryset = SavedArticle.objects.all()
+
+    def list(self, request):
+        user_articles = self.queryset.filter(user=request.user)
+        serializer = SavedArticleSerializer(user_articles, many=True)
+        return Response(serializer.data)
 

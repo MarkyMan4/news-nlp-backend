@@ -14,4 +14,4 @@ class ArticleNlpSerializer(serializers.ModelSerializer):
 class SavedArticleSerializer(serializers.ModelSerializer):
     class Meta:
         model = SavedArticle
-        fields = ('user', 'article')
+        fields = ('id', 'user', 'article')
