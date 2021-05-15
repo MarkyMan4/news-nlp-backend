@@ -95,15 +95,28 @@ class ArticleViewSet(viewsets.ViewSet):
 
 # ModelViewSet includes methods to get objects, create, edit and delete by default.
 # Need to refine this so users can only delete their own saved articles. Also need
-# to only allow get, post and delete. For get, users should only be able to retrieve 
-# their own saved articles.
+# to only allow get, post and delete.
 class SavedArticleViewset(viewsets.ModelViewSet):
     serializer_class = SavedArticleSerializer
     permission_classes = [permissions.IsAuthenticated]
     queryset = SavedArticle.objects.all()
 
+    # list all articles saved by the current user
     def list(self, request):
         user_articles = self.queryset.filter(user=request.user)
-        serializer = SavedArticleSerializer(user_articles, many=True)
+        serializer = self.get_serializer(user_articles, many=True)
         return Response(serializer.data)
 
+    # save an article
+    def create(self, request, *args, **kwargs):
+        data = request.data
+        data['user'] = request.user.id # add the user id to the data to be saved
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+    # can add custom functionality when saving here if needed
+    def perform_create(self, serializer):
+        serializer.save()
