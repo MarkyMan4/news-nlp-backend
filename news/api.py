@@ -120,3 +120,14 @@ class SavedArticleViewset(viewsets.ModelViewSet):
     # can add custom functionality when saving here if needed
     def perform_create(self, serializer):
         serializer.save()
+
+    # only allow users to delete their own saved articles
+    def destroy(self, request, pk):
+        article_to_delete = SavedArticle.objects.filter(pk=pk)
+        response = {'result': 'you do not have permission to delete this saved article'}
+
+        if(article_to_delete.first().user_id == request.user.id):
+            article_to_delete.delete()
+            response = {'result': 'saved article deleted'}
+
+        return Response(response)
