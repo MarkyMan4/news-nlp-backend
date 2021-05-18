@@ -38,8 +38,8 @@ class ArticleViewSet(viewsets.ViewSet):
         # joins article with article_nlp and construct the response myself without serializers
         for article in response_data:
             nlp_queryset = ArticleNlp.objects.filter(article_id=article['id'])
-            nlp_serializer = ArticleNlpSerializer(nlp_queryset.first())
-            article['nlp'] = nlp_serializer.data
+            article_nlp = nlp_queryset.first()
+            article['nlp'] = self.get_article_nlp(article_nlp)
 
         return Response(response_data)
 
@@ -81,17 +81,23 @@ class ArticleViewSet(viewsets.ViewSet):
 
         # get objects for 404 from each queryset
         article = get_object_or_404(article_queryset)
-        nlp = get_object_or_404(nlp_queryset)
+        article_nlp = get_object_or_404(nlp_queryset)
 
-        # create the serializers for each object
+        # create the serializer for article
         article_serializer = ArticleSerializer(article)
-        nlp_serializer = ArticleNlpSerializer(nlp)
 
         # construct the response with the NLP as a nested object
         response_data = article_serializer.data
-        response_data['nlp'] = nlp_serializer.data
+        response_data['nlp'] = self.get_article_nlp(article_nlp)
         
         return Response(response_data)
+
+    def get_article_nlp(self, article_nlp):
+        nlp_serializer = ArticleNlpSerializer(article_nlp)
+        nlp = nlp_serializer.data
+        nlp['topic_name'] = article_nlp.topic.topic_name
+
+        return nlp
 
 # ModelViewSet includes methods to get objects, create, edit and delete by default.
 # Need to refine this so users can only delete their own saved articles. Also need
@@ -100,7 +106,7 @@ class SavedArticleViewset(viewsets.ModelViewSet):
     serializer_class = SavedArticleSerializer
     permission_classes = [permissions.IsAuthenticated]
     queryset = SavedArticle.objects.all()
-    http_method_names = ['get', 'post', 'delete']
+    http_method_names = ['get', 'post', 'delete'] # ModelViewSet includes many methods out of the box, so this limits them to only what is needed
 
     # list all articles saved by the current user
     def list(self, request):
