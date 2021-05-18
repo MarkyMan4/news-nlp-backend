@@ -100,6 +100,7 @@ class SavedArticleViewset(viewsets.ModelViewSet):
     serializer_class = SavedArticleSerializer
     permission_classes = [permissions.IsAuthenticated]
     queryset = SavedArticle.objects.all()
+    http_method_names = ['get', 'post', 'delete']
 
     # list all articles saved by the current user
     def list(self, request):
