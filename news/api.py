@@ -1,7 +1,7 @@
-from django.db.models import query
-from rest_framework import generics, permissions, serializers
+from rest_framework import permissions
 from rest_framework import viewsets, status
 from rest_framework.response import Response
+from rest_framework.pagination import PageNumberPagination
 from django.shortcuts import get_object_or_404
 from .serializers import ArticleSerializer, ArticleNlpSerializer, SavedArticleSerializer
 from .models import Article, ArticleNlp, SavedArticle
@@ -29,7 +29,11 @@ class ArticleViewSet(viewsets.ViewSet):
         # any filtering will be provided as query parameters
         article_queryset = self.filter_articles(article_queryset, query_params)
 
-        article_serializer = ArticleSerializer(article_queryset, many=True)
+        # apply pagination
+        paginator = PageNumberPagination()
+        page = paginator.paginate_queryset(article_queryset, request)
+
+        article_serializer = ArticleSerializer(page, many=True)
         response_data = article_serializer.data
 
         # this seems ineffecient - has to do N queries where N is the number of articles 
