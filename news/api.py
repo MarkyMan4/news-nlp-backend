@@ -30,10 +30,14 @@ class ArticleViewSet(viewsets.ViewSet):
         article_queryset = self.filter_articles(article_queryset, query_params)
 
         # apply pagination
-        paginator = PageNumberPagination()
-        page = paginator.paginate_queryset(article_queryset, request)
+        data_for_serializer = article_queryset
 
-        article_serializer = ArticleSerializer(page, many=True)
+        if 'page' in query_params:
+            paginator = PageNumberPagination()
+            data_for_serializer = paginator.paginate_queryset(article_queryset, request)
+        
+        article_serializer = ArticleSerializer(data_for_serializer, many=True)
+        
         response_data = article_serializer.data
 
         # this seems ineffecient - has to do N queries where N is the number of articles 
