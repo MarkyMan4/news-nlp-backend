@@ -1,5 +1,6 @@
 from rest_framework import permissions
 from rest_framework import viewsets, status
+from rest_framework import pagination
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
 from django.shortcuts import get_object_or_404
@@ -31,10 +32,15 @@ class ArticleViewSet(viewsets.ViewSet):
 
         # apply pagination
         data_for_serializer = article_queryset
+        total_pages = 1
+        page_no = 1
 
         if 'page' in query_params:
             paginator = PageNumberPagination()
             data_for_serializer = paginator.paginate_queryset(article_queryset, request)
+            total_pages = paginator.page.paginator.num_pages
+            page_no = paginator.page.number
+            
         
         article_serializer = ArticleSerializer(data_for_serializer, many=True)
         
@@ -48,6 +54,14 @@ class ArticleViewSet(viewsets.ViewSet):
             nlp_queryset = ArticleNlp.objects.filter(article_id=article['id'])
             article_nlp = nlp_queryset.first()
             article['nlp'] = self.get_article_nlp(article_nlp)
+
+        # need to do this check again so the final repsonse can be formatted
+        if 'page' in query_params:
+            response_data = {
+                'page': page_no,
+                'total_pages': total_pages,
+                'articles': response_data
+            }
 
         return Response(response_data)
 
