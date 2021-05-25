@@ -97,20 +97,27 @@ class ArticleViewSet(viewsets.ViewSet):
     # /api/article/<article id>
     # gets a specific news article
     def retrieve(self, request, pk=None):
+        response_data = {}
+
         # queries for article and NLP
         article_queryset = Article.objects.filter(pk=pk)
         nlp_queryset = ArticleNlp.objects.filter(article_id=pk)
 
-        # get objects for 404 from each queryset
-        article = get_object_or_404(article_queryset)
-        article_nlp = get_object_or_404(nlp_queryset)
+        if article_queryset:
+            # get objects for 404 from each queryset
+            article = get_object_or_404(article_queryset)
+            article_nlp = get_object_or_404(nlp_queryset)
 
-        # create the serializer for article
-        article_serializer = ArticleSerializer(article)
+            # create the serializer for article
+            article_serializer = ArticleSerializer(article)
 
-        # construct the response with the NLP as a nested object
-        response_data = article_serializer.data
-        response_data['nlp'] = self.get_article_nlp(article_nlp)
+            # construct the response with the NLP as a nested object
+            response_data = article_serializer.data
+            response_data['nlp'] = self.get_article_nlp(article_nlp)
+        else:
+            response_data = {
+                'error': 'article does not exist'
+            }
         
         return Response(response_data)
 
