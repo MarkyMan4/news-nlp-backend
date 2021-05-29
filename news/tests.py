@@ -3,6 +3,7 @@ from rest_framework import status
 from django.urls import reverse
 from .models import Article, ArticleNlp, TopicLkp
 from random import random
+from datetime import datetime, timedelta
 import json
 
 class ArticleViewSetTestCase(APITestCase):
@@ -13,20 +14,23 @@ class ArticleViewSetTestCase(APITestCase):
     def setUp(self):
         self.articles = []
 
-        # create 100 articles
-        for i in range(100):
+        date = datetime(2021, 4, 30)
+
+        # create 500 articles
+        for i in range(500):
             article = Article.objects.create(
-                post_id = f"{i}",
-                post_title = f"test title {i}",
-                url = "www.article.com",
+                post_id = f'{i}',
+                post_title = f'test title {i}',
+                url = 'www.article.com',
                 score = i,
-                publisher = "test publisher",
-                headline = "some very important news",
-                date_published = "2021-01-01",
-                content = "sf asf asfl;kjasf; aslkjf owjnef opwnfoenqwf iowbnfwiofbn wfnqwe fn wfn asdf"
+                publisher = 'test publisher',
+                headline = 'some very important news',
+                date_published = date.strftime('%Y-%m-%d'),
+                content = 'sf asf asfl;kjasf; aslkjf owjnef opwnfoenqwf iowbnfwiofbn wfnqwe fn wfn asdf'
             )
 
             self.articles.append(article)
+            date -= timedelta(days=1)
 
         # create 4 topics
         self.topics = []
@@ -51,7 +55,7 @@ class ArticleViewSetTestCase(APITestCase):
     # get a page of articles
     def test_list_articles(self):
         data = {
-            "page": 1
+            'page': 1
         }
 
         response = self.client.get('/api/article', data=data)
@@ -60,7 +64,7 @@ class ArticleViewSetTestCase(APITestCase):
 
     def test_page_size(self):
         data = {
-            "page": 1
+            'page': 1
         }
 
         response = self.client.get('/api/article', data=data)
@@ -71,11 +75,11 @@ class ArticleViewSetTestCase(APITestCase):
     # make sure we get 404 when a page is too big or small
     def test_page_out_of_bounds(self):
         big_page = {
-            "page": 10000
+            'page': 10000
         }
 
         small_page = {
-            "page": -10
+            'page': -10
         }
 
         big_page_response = self.client.get('/api/article', data=big_page)
@@ -84,3 +88,50 @@ class ArticleViewSetTestCase(APITestCase):
         self.assertEqual(big_page_response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(small_page_response.status_code, status.HTTP_404_NOT_FOUND)
 
+    def test_article_query_params_with_sentiment(self):
+        # no page specified so this is not paginated
+        # haven't included tests for publisher yet
+        sentiment_constraints = {
+            'startDate': '2021-01-01T00:00:00Z',
+            'endDate': '2021-04-01T00:00:00Z',
+            'topic': 1,
+            'minSentiment': -0.5,
+            'maxSentiment': 0.5
+        }
+
+        response = self.client.get('/api/article', data=sentiment_constraints)
+
+        def str_to_dt(date_str):
+            return datetime.strptime(date_str, '%Y-%m-%dT%H:%M:%SZ')
+
+        # ignore warnings about naive datetimes for now
+        for article in json.loads(response.content):
+            self.assertGreaterEqual(str_to_dt(article['date_published']), str_to_dt(sentiment_constraints['startDate']))
+            self.assertLessEqual(str_to_dt(article['date_published']), str_to_dt(sentiment_constraints['endDate']))
+            self.assertEqual(article['nlp']['topic'], sentiment_constraints['topic'])
+            self.assertGreaterEqual(float(article['nlp']['sentiment']), sentiment_constraints['minSentiment'])
+            self.assertLessEqual(float(article['nlp']['sentiment']), sentiment_constraints['maxSentiment'])
+
+    def test_article_query_params_with_subjectivity(self):
+        # no page specified so this is not paginated
+        # haven't included tests for publisher yet
+        subjectivity_constraints = {
+            'startDate': '2021-01-01T00:00:00Z',
+            'endDate': '2021-04-01T00:00:00Z',
+            'topic': 2,
+            'minSubjectivity': 0.1,
+            'maxSubjectivity': 0.5
+        }
+
+        response = self.client.get('/api/article', data=subjectivity_constraints)
+
+        def str_to_dt(date_str):
+            return datetime.strptime(date_str, '%Y-%m-%dT%H:%M:%SZ')
+
+        # ignore warnings about naive datetimes for now
+        for article in json.loads(response.content):
+            self.assertGreaterEqual(str_to_dt(article['date_published']), str_to_dt(subjectivity_constraints['startDate']))
+            self.assertLessEqual(str_to_dt(article['date_published']), str_to_dt(subjectivity_constraints['endDate']))
+            self.assertEqual(article['nlp']['topic'], subjectivity_constraints['topic'])
+            self.assertGreaterEqual(float(article['nlp']['subjectivity']), subjectivity_constraints['minSubjectivity'])
+            self.assertLessEqual(float(article['nlp']['subjectivity']), subjectivity_constraints['maxSubjectivity'])
