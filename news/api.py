@@ -3,9 +3,16 @@ from rest_framework import viewsets, status
 from rest_framework import pagination
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.decorators import action
 from django.shortcuts import get_object_or_404
 from .serializers import ArticleSerializer, ArticleNlpSerializer, SavedArticleSerializer
 from .models import Article, ArticleNlp, SavedArticle
+
+from gensim.models.doc2vec import Doc2Vec, TaggedDocument
+import nltk
+from nltk.corpus import stopwords
+import pickle
+import string
 
 
 class ArticleViewSet(viewsets.ViewSet):
@@ -127,6 +134,78 @@ class ArticleViewSet(viewsets.ViewSet):
         nlp['topic_name'] = article_nlp.topic.topic_name
 
         return nlp
+
+    # cleans headline text by tokenizing it and removing stopwords and punctuation
+    def clean_headline(self, headline: str):
+        stop_words = set(stopwords.words('english'))
+        return [word for word in nltk.word_tokenize(headline) if word not in stop_words and word not in string.punctuation]
+
+    # given a list of tags, lookup the headline in the tag_lookup object
+    def get_headlines_by_tags(self, tags):
+        # load the tag lookup
+        with open('news/models/tag_lookup.pickle', 'rb') as f:
+            tag_lookup = pickle.load(f)
+
+        headlines = []
+
+        for tag in tags:
+            headlines.append(tag_lookup[tag])
+
+        return headlines
+
+    # given a list of headlines, find the articles in the database and return a list of Article objects
+    def get_articles_by_headlines(self, headlines: list):
+        articles = []
+
+        for h in headlines:
+            article = Article.objects.filter(headline=h).first()
+
+            # serialize the article and get the NLP for it
+            article_data = ArticleSerializer(article).data
+            article_nlp = ArticleNlp.objects.filter(article_id=article.id).first()
+            article_data['nlp'] = self.get_article_nlp(article_nlp)
+
+            articles.append(article_data)
+
+        return articles
+
+    # /api/article/<article ID>/get_similar
+    # optional query param: numResults - number of articles to return
+    @action(methods=['GET'], detail=True)
+    def get_similar(self, request, pk):
+        # check for query params, number of results defaults to 10
+        # have to put 11 here since the first result is the same article, using 11 will give 10 similar articles
+        num_results = 11
+
+        if request.query_params.get('numResults') and request.query_params.get('numResults').isnumeric():
+            num_results = int(request.query_params.get('numResults')) + 1 # need to add one since the first result is always the same article
+
+        # load the doc2vec model
+        model = Doc2Vec.load('news/models/headline_model')
+
+        # retrieve the headline from the database, return error if the pk doesn't exist
+        article = Article.objects.filter(pk=pk).first()
+
+        if not article:
+            return Response({'error': 'article does not exist'})
+
+        headline = article.headline
+
+        # find the top n most similar articles
+        clean_headline = self.clean_headline(headline)
+        similar = model.docvecs.most_similar(positive=[model.infer_vector(clean_headline)],topn=num_results)
+
+        # remove the first item since it is the same headline
+        similar.pop(0)
+
+        # similar is a list of tuples of the form (tag, % similarity), we only need the tag
+        tags = [tag[0] for tag in similar]
+        headlines = self.get_headlines_by_tags(tags)
+
+        # get the article objects for response
+        similar_articles = self.get_articles_by_headlines(headlines)
+
+        return Response(similar_articles)
 
 # ModelViewSet includes methods to get objects, create, edit and delete by default.
 # Need to refine this so users can only delete their own saved articles. Also need
