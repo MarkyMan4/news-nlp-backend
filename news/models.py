@@ -24,3 +24,4 @@ class ArticleNlp(models.Model):
     topic = models.ForeignKey(TopicLkp, to_field='topic_id', db_column='topic', on_delete=models.CASCADE)
     sentiment = models.DecimalField(max_digits=4, decimal_places=3)
     subjectivity = models.DecimalField(max_digits=4, decimal_places=3)
+    keywords = models.CharField(max_length=200, null=True)
