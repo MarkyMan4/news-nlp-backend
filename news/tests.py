@@ -49,7 +49,8 @@ class ArticleViewSetTestCase(APITestCase):
                 article=article,
                 topic=self.topics[int(random() * len(self.topics))], # random topic
                 sentiment=random() * (-1 if random() > 0.5 else 1), # between -1 and 1
-                subjectivity=random() # between 0 and 1
+                subjectivity=random(), # between 0 and 1
+                keywords='asdf;asdf;asdf;asdf;asdf;asdf;asdf;asdf;asdf;asdf'
             )
 
     # get a page of articles
