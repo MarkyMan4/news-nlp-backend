@@ -136,3 +136,26 @@ class ArticleViewSetTestCase(APITestCase):
             self.assertEqual(article['nlp']['topic'], subjectivity_constraints['topic'])
             self.assertGreaterEqual(float(article['nlp']['subjectivity']), subjectivity_constraints['minSubjectivity'])
             self.assertLessEqual(float(article['nlp']['subjectivity']), subjectivity_constraints['maxSubjectivity'])
+
+    # ensure using topic ID or topic name give the same result when describing the same topic
+    def test_topic_and_topic_name(self):
+        topic_id_params = {
+            'topic': 0
+        }
+
+        topic_name_params = {
+            'topic_name': 'topic 0'
+        }
+
+        # get the response 
+        resp1 = self.client.get('/api/article', data=topic_id_params)
+        resp2 = self.client.get('/api/article', data=topic_name_params)
+
+        data1 = json.loads(resp1.content)
+        data2 = json.loads(resp2.content)
+
+        # get a list of IDs from each response and ensure they are the same
+        ids1 = [item['id'] for item in data1]
+        ids2 = [item['id'] for item in data2]
+
+        self.assertEqual(ids1, ids2)

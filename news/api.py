@@ -6,7 +6,7 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.decorators import action
 from django.shortcuts import get_object_or_404
 from .serializers import ArticleSerializer, ArticleNlpSerializer, SavedArticleSerializer
-from .models import Article, ArticleNlp, SavedArticle
+from .models import Article, ArticleNlp, SavedArticle, TopicLkp
 
 from gensim.models.doc2vec import Doc2Vec, TaggedDocument
 import nltk
@@ -86,6 +86,11 @@ class ArticleViewSet(viewsets.ViewSet):
 
         if query_params.get('topic'):
             article_queryset = article_queryset.filter(articlenlp__topic=query_params.get('topic'))
+
+        # will only filter on topic or topic_name, not both. If both are supplied, it will only filter on topic
+        if query_params.get('topic_name') and not query_params.get('topic'):
+            topic_id = TopicLkp.objects.filter(topic_name=query_params.get('topic_name')).first().topic_id
+            article_queryset = article_queryset.filter(articlenlp__topic=topic_id)
 
         if query_params.get('minSentiment'):
             article_queryset = article_queryset.filter(articlenlp__sentiment__gte=query_params.get('minSentiment'))
