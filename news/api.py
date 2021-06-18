@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.decorators import action
 from django.shortcuts import get_object_or_404
-from .serializers import ArticleSerializer, ArticleNlpSerializer, SavedArticleSerializer
+from .serializers import ArticleSerializer, ArticleNlpSerializer, SavedArticleSerializer, TopicSerializer
 from .models import Article, ArticleNlp, SavedArticle, TopicLkp
 
 from gensim.models.doc2vec import Doc2Vec, TaggedDocument
@@ -251,3 +251,14 @@ class SavedArticleViewset(viewsets.ModelViewSet):
             response = {'result': 'saved article deleted'}
 
         return Response(response)
+
+class TopicViewSet(viewsets.ModelViewSet):
+    serializer_class = TopicSerializer
+    queryset = TopicLkp.objects.all()
+    http_method_names = ['get']
+
+    # list all topics
+    def list(self, request):
+        topics = self.queryset
+        serializer = self.get_serializer(topics, many=True)
+        return Response(serializer.data)
