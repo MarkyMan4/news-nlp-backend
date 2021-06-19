@@ -159,3 +159,11 @@ class ArticleViewSetTestCase(APITestCase):
         ids2 = [item['id'] for item in data2]
 
         self.assertEqual(ids1, ids2)
+
+    def test_list_topics(self):
+        response = self.client.get('/api/topics')
+        data = json.loads(response.content)
+
+        for i in range(len(data)):
+            self.assertEqual(data[i]['topic_id'], i)
+            self.assertEqual(data[i]['topic_name'], f'topic {i}')
