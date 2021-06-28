@@ -144,7 +144,7 @@ class ArticleViewSetTestCase(APITestCase):
         }
 
         topic_name_params = {
-            'topic_name': 'topic 0'
+            'topicName': 'topic 0'
         }
 
         # get the response 

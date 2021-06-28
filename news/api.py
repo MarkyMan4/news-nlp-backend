@@ -29,8 +29,11 @@ class ArticleViewSet(viewsets.ViewSet):
     #   6. maxSentiment - only return articles with sentiment less than or equal to this value
     #   7. minSubjectivity - only return articles with subjectivity greater than or equal to this value
     #   8. maxSubjectivity - only return articles with subjectivity less than or equal to this value
+    #   9. topicName - only return articles with this topic
+    #  10. order - Must be 'new' or 'old'. This determines if the results will be ordered from
+    #              newest to oldest or oldest to newest. Default from newest to oldest.
     def list(self, request):
-        article_queryset = Article.objects.all()
+        article_queryset = Article.objects.all().order_by('-date_published')
 
         query_params = request.query_params
 
@@ -88,8 +91,8 @@ class ArticleViewSet(viewsets.ViewSet):
             article_queryset = article_queryset.filter(articlenlp__topic=query_params.get('topic'))
 
         # will only filter on topic or topic_name, not both. If both are supplied, it will only filter on topic
-        if query_params.get('topic_name') and not query_params.get('topic'):
-            topic_id = TopicLkp.objects.filter(topic_name=query_params.get('topic_name')).first().topic_id
+        if query_params.get('topicName') and not query_params.get('topic'):
+            topic_id = TopicLkp.objects.filter(topic_name=query_params.get('topicName')).first().topic_id
             article_queryset = article_queryset.filter(articlenlp__topic=topic_id)
 
         if query_params.get('minSentiment'):
@@ -103,6 +106,11 @@ class ArticleViewSet(viewsets.ViewSet):
 
         if query_params.get('maxSubjectivity'):
             article_queryset = article_queryset.filter(articlenlp__subjectivity__lte=query_params.get('maxSubjectivity'))
+
+        if query_params.get('order'):
+            # only need to handle case for sorting oldest to newest since it sorts by newest by default
+            if query_params.get('order') == 'old':
+                article_queryset = article_queryset.order_by('date_published')
 
         return article_queryset
 
