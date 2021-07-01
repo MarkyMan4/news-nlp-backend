@@ -137,6 +137,50 @@ class ArticleViewSetTestCase(APITestCase):
             self.assertGreaterEqual(float(article['nlp']['subjectivity']), subjectivity_constraints['minSubjectivity'])
             self.assertLessEqual(float(article['nlp']['subjectivity']), subjectivity_constraints['maxSubjectivity'])
 
+    def test_article_sorting(self):
+        newest_first_params = {
+            'order': 'new'
+        }
+
+        oldest_first_params = {
+            'order': 'old'
+        }
+
+        # get response using order new, old, and no params (no params should default to newest first)
+        newest_first_resp = self.client.get('/api/article', data=newest_first_params)
+        newest_first_no_params_resp = self.client.get('/api/article')
+        oldest_first_resp = self.client.get('/api/article', data=oldest_first_params)
+
+        def str_to_dt(date_str):
+            return datetime.strptime(date_str, '%Y-%m-%dT%H:%M:%SZ')
+
+        # check that each date is either greater than or less than the previous date
+        # articles - list of Article objects
+        # newestFirst - boolean value, this determines whether it checks if the current article's
+        #          date should be less than or greater than the previous article's date
+        def check_dates(articles, newestFirst):
+            previous = None
+
+            for i, article in enumerate(articles):
+                if i == 0:
+                    previous = article['date_published']
+                else:
+                    if(newestFirst):
+                        self.assertLessEqual(str_to_dt(article['date_published']), str_to_dt(previous))
+                    else:
+                        self.assertGreaterEqual(str_to_dt(article['date_published']), str_to_dt(previous))
+
+                    previous = article['date_published']
+
+        # newest first - check that each date is LESS THAN OR EQUAL TO the previous date
+        check_dates(json.loads(newest_first_resp.content), True)
+
+        # newest first no params - same thing
+        check_dates(json.loads(newest_first_no_params_resp.content), True)
+
+        # oldest first - check that each date is GREATER THAN OR EQUAL TO the previous date
+        check_dates(json.loads(oldest_first_resp.content), False)
+
     # ensure using topic ID or topic name give the same result when describing the same topic
     def test_topic_and_topic_name(self):
         topic_id_params = {
