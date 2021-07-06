@@ -220,6 +220,25 @@ class ArticleViewSet(viewsets.ViewSet):
 
         return Response(similar_articles)
 
+    # /api/article/get_article_count
+    # optional query param: topic - the ID of the topic to find the count for, defaults to counting all articles
+    @action(methods=['GET'], detail=False)
+    def get_article_count(self, request):
+        articles = Article.objects.all()
+
+        if request.query_params.get('topic'):
+            topic_id = request.query_params.get('topic')
+            articles = articles.filter(articlenlp__topic=topic_id)
+
+        num_articles = articles.count()
+
+        response = {
+            'count': num_articles
+        }
+
+        return Response(response)
+
+
 # ModelViewSet includes methods to get objects, create, edit and delete by default.
 # Need to refine this so users can only delete their own saved articles. Also need
 # to only allow get, post and delete.
