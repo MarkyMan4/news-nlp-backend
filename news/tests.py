@@ -6,6 +6,9 @@ from random import random
 from datetime import datetime, timedelta
 import json
 
+NUM_ARTICLES = 500
+NUM_TOPICS = 4
+
 class ArticleViewSetTestCase(APITestCase):
 
     # list_url = reverse('news:article-list')
@@ -17,7 +20,7 @@ class ArticleViewSetTestCase(APITestCase):
         date = datetime(2021, 4, 30)
 
         # create 500 articles
-        for i in range(500):
+        for i in range(NUM_ARTICLES):
             article = Article.objects.create(
                 post_id = f'{i}',
                 post_title = f'test title {i}',
@@ -35,7 +38,7 @@ class ArticleViewSetTestCase(APITestCase):
         # create 4 topics
         self.topics = []
 
-        for i in range(4):
+        for i in range(NUM_TOPICS):
             topic = TopicLkp.objects.create(
                 topic_id=i,
                 topic_name=f'topic {i}'
@@ -211,3 +214,23 @@ class ArticleViewSetTestCase(APITestCase):
         for i in range(len(data)):
             self.assertEqual(data[i]['topic_id'], i)
             self.assertEqual(data[i]['topic_name'], f'topic {i}')
+
+    # test that the count of articles is accurate
+    def test_get_article_counts(self):
+        resp = self.client.get('/api/article/get_article_count')
+        data = json.loads(resp.content)
+
+        count = data['count']
+        self.assertEqual(count, NUM_ARTICLES)
+
+    # test that the sum of counts for each topic is equal to the total number of articles
+    def test_get_article_count_by_topic(self):
+        total_count = 0
+
+        for i in range(NUM_TOPICS):
+            # index is same as topic ID
+            resp = self.client.get(f'/api/article/get_article_count?topic={i}')
+            data = json.loads(resp.content)
+            total_count += data['count']
+
+        self.assertEqual(total_count, NUM_ARTICLES)
