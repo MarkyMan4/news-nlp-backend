@@ -279,6 +279,23 @@ class SavedArticleViewset(viewsets.ModelViewSet):
 
         return Response(response)
 
+    # GET /api/savearticle/<article id>/is_saved
+    # check if a given article is saved by the user
+    @action(methods=['GET'], detail=True)
+    def is_saved(self, request, pk):
+        res = {'result': False}
+        user_id = request.user.id
+        
+        try:
+            user_articles = SavedArticle.objects.filter(user_id=user_id).filter(article_id=pk)
+
+            if len(user_articles) > 0:
+                res['result'] = True
+        except Exception as e:
+            print(e)
+
+        return Response(res)
+
 class TopicViewSet(viewsets.ModelViewSet):
     serializer_class = TopicSerializer
     queryset = TopicLkp.objects.all()
