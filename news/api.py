@@ -238,7 +238,6 @@ class ArticleViewSet(viewsets.ViewSet):
 
         return Response(response)
 
-
 # ModelViewSet includes methods to get objects, create, edit and delete by default.
 # Need to refine this so users can only delete their own saved articles. Also need
 # to only allow get, post and delete.
@@ -255,6 +254,7 @@ class SavedArticleViewset(viewsets.ModelViewSet):
         return Response(serializer.data)
 
     # save an article
+    # TODO: don't allow a user to save the same article more than once
     def create(self, request, *args, **kwargs):
         data = request.data
         data['user'] = request.user.id # add the user id to the data to be saved
@@ -269,8 +269,11 @@ class SavedArticleViewset(viewsets.ModelViewSet):
         serializer.save()
 
     # only allow users to delete their own saved articles
+    # the pk should be an article ID, this method will then lookup the user ID
+    # since the user should not be allowed to save the same article more than once,
+    # this is guaranteed to be a unique combination
     def destroy(self, request, pk):
-        article_to_delete = SavedArticle.objects.filter(pk=pk)
+        article_to_delete = SavedArticle.objects.filter(user=request.user.id, article=pk)
         response = {'result': 'you do not have permission to delete this saved article'}
 
         if(article_to_delete.first().user_id == request.user.id):
@@ -287,7 +290,7 @@ class SavedArticleViewset(viewsets.ModelViewSet):
         user_id = request.user.id
         
         try:
-            user_articles = SavedArticle.objects.filter(user_id=user_id).filter(article_id=pk)
+            user_articles = SavedArticle.objects.filter(user_id=user_id, article_id=pk)
 
             if len(user_articles) > 0:
                 res['result'] = True
