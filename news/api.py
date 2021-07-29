@@ -249,9 +249,15 @@ class SavedArticleViewset(viewsets.ModelViewSet):
 
     # list all articles saved by the current user
     def list(self, request):
-        user_articles = self.queryset.filter(user=request.user)
-        serializer = self.get_serializer(user_articles, many=True)
-        return Response(serializer.data)
+        # query the saved articles for this user
+        user_saved_articles = self.queryset.filter(user=request.user)
+        article_ids = [saved_article.article_id for saved_article in user_saved_articles]
+        articles = Article.objects.filter(id__in=article_ids)
+        
+        # serialize the result
+        article_serializer = ArticleSerializer(articles, many=True)
+        
+        return Response(article_serializer.data)
 
     # save an article
     # TODO: don't allow a user to save the same article more than once
