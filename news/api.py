@@ -14,6 +14,13 @@ from nltk.corpus import stopwords
 import pickle
 import string
 
+# TODO: move this to a separate file with other utility functions
+def get_article_nlp(article_nlp):
+    nlp_serializer = ArticleNlpSerializer(article_nlp)
+    nlp = nlp_serializer.data
+    nlp['topic_name'] = article_nlp.topic.topic_name
+
+    return nlp
 
 class ArticleViewSet(viewsets.ViewSet):
 
@@ -63,7 +70,7 @@ class ArticleViewSet(viewsets.ViewSet):
         for article in response_data:
             nlp_queryset = ArticleNlp.objects.filter(article_id=article['id'])
             article_nlp = nlp_queryset.first()
-            article['nlp'] = self.get_article_nlp(article_nlp)
+            article['nlp'] = get_article_nlp(article_nlp)
 
         # need to do this check again so the final repsonse can be formatted
         if 'page' in query_params:
@@ -133,20 +140,13 @@ class ArticleViewSet(viewsets.ViewSet):
 
             # construct the response with the NLP as a nested object
             response_data = article_serializer.data
-            response_data['nlp'] = self.get_article_nlp(article_nlp)
+            response_data['nlp'] = get_article_nlp(article_nlp)
         else:
             response_data = {
                 'error': 'article does not exist'
             }
         
         return Response(response_data)
-
-    def get_article_nlp(self, article_nlp):
-        nlp_serializer = ArticleNlpSerializer(article_nlp)
-        nlp = nlp_serializer.data
-        nlp['topic_name'] = article_nlp.topic.topic_name
-
-        return nlp
 
     # cleans headline text by tokenizing it and removing stopwords and punctuation
     def clean_headline(self, headline: str):
@@ -176,7 +176,7 @@ class ArticleViewSet(viewsets.ViewSet):
             # serialize the article and get the NLP for it
             article_data = ArticleSerializer(article).data
             article_nlp = ArticleNlp.objects.filter(article_id=article.id).first()
-            article_data['nlp'] = self.get_article_nlp(article_nlp)
+            article_data['nlp'] = get_article_nlp(article_nlp)
 
             articles.append(article_data)
 
@@ -256,8 +256,16 @@ class SavedArticleViewset(viewsets.ModelViewSet):
         
         # serialize the result
         article_serializer = ArticleSerializer(articles, many=True)
+        response_data = article_serializer.data
+
+        # add the NLP data to the response object
+        # this is duplicate code from ArticleViewSet, need to refactor this file to make this stuff more reusable
+        for article in response_data:
+            nlp_queryset = ArticleNlp.objects.filter(article_id=article['id'])
+            article_nlp = nlp_queryset.first()
+            article['nlp'] = get_article_nlp(article_nlp)
         
-        return Response(article_serializer.data)
+        return Response(response_data)
 
     # save an article
     # TODO: don't allow a user to save the same article more than once
