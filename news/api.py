@@ -99,8 +99,11 @@ class ArticleViewSet(viewsets.ViewSet):
 
         # will only filter on topic or topic_name, not both. If both are supplied, it will only filter on topic
         if query_params.get('topicName') and not query_params.get('topic'):
-            topic_id = TopicLkp.objects.filter(topic_name=query_params.get('topicName')).first().topic_id
-            article_queryset = article_queryset.filter(articlenlp__topic=topic_id)
+            topic = TopicLkp.objects.filter(topic_name=query_params.get('topicName')).first()
+            
+            # if an invalid topic name was given, don't do any filtering
+            if topic:
+                article_queryset = article_queryset.filter(articlenlp__topic=topic.topic_id)
 
         if query_params.get('minSentiment'):
             article_queryset = article_queryset.filter(articlenlp__sentiment__gte=query_params.get('minSentiment'))
