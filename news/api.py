@@ -321,8 +321,24 @@ class TopicViewSet(viewsets.ModelViewSet):
     queryset = TopicLkp.objects.all()
     http_method_names = ['get']
 
+    # GET /api/topics
     # list all topics
     def list(self, request):
         topics = self.queryset
         serializer = self.get_serializer(topics, many=True)
         return Response(serializer.data)
+
+    # GET /api/topics/counts
+    # retrieve the count of articles for each topic
+    @action(methods=['GET'], detail=False)
+    def counts(self, request):
+        response = {}
+        topics = self.queryset
+
+        for topic in topics:
+            article_count = Article.objects.filter(articlenlp__topic=topic.topic_id).count()
+            response.update({
+                topic.topic_name: article_count
+            })
+
+        return Response(response)
