@@ -241,6 +241,26 @@ class ArticleViewSet(viewsets.ViewSet):
 
         return Response(response)
 
+    # /api/article/count_by_sentiment
+    # gets the article count for each sentiment
+    # breakdown as follows:
+    #   -1.0 <= sentiment < -0.05   -- negative
+    #   -0.05 <= sentiment <= 0.05   -- neutral
+    #   0.05 < sentiment <= 1.0     -- positive
+    @action(methods=['GET'], detail=False)
+    def count_by_sentiment(self, request):
+        negative_count = ArticleNlp.objects.filter(sentiment__lt=-0.05).count()
+        neutral_count = ArticleNlp.objects.filter(sentiment__gte=-0.05, sentiment__lte=0.05).count()
+        positive_count = ArticleNlp.objects.filter(sentiment__gt=0.05).count()
+
+        response = {
+            'negative': negative_count,
+            'neutral': neutral_count,
+            'positive': positive_count
+        }
+
+        return Response(response)
+
 # ModelViewSet includes methods to get objects, create, edit and delete by default.
 # Need to refine this so users can only delete their own saved articles. Also need
 # to only allow get, post and delete.
