@@ -13,6 +13,7 @@ import nltk
 from nltk.corpus import stopwords
 import pickle
 import string
+from datetime import datetime, timedelta
 
 # TODO: move this to a separate file with other utility functions
 def get_article_nlp(article_nlp):
@@ -247,11 +248,35 @@ class ArticleViewSet(viewsets.ViewSet):
     #   -1.0 <= sentiment < -0.05   -- negative
     #   -0.05 <= sentiment <= 0.05   -- neutral
     #   0.05 < sentiment <= 1.0     -- positive
+    # Optional query params:
+    #   timeFrame - can having the following values [day, week, month, year]
+    #              this specifies whether the count should be for articles from the past day, week, etc.
+    #
+    # If not query param specified, it will count all the articles.
     @action(methods=['GET'], detail=False)
     def count_by_sentiment(self, request):
-        negative_count = ArticleNlp.objects.filter(sentiment__lt=-0.05).count()
-        neutral_count = ArticleNlp.objects.filter(sentiment__gte=-0.05, sentiment__lte=0.05).count()
-        positive_count = ArticleNlp.objects.filter(sentiment__gt=0.05).count()
+        article_nlp = ArticleNlp.objects.all()
+        query_params = request.query_params
+
+        # check if a time frame was given, if it doesn't match day, week, month or year it won't filter anything
+        if query_params.get('timeFrame'):
+            time_frame = query_params.get('timeFrame')
+            filter_date = datetime(1970, 1, 1) # default to this so if a valid value wasn't given for timeFrame, it won't filter anything
+
+            if time_frame == 'day':
+                filter_date = datetime.now() - timedelta(days = 1)
+            elif time_frame == 'week':
+                filter_date = datetime.now() - timedelta(days = 7)
+            elif time_frame == 'month':
+                filter_date = datetime.now() - timedelta(days = 30)
+            elif time_frame == 'year':
+                filter_date = datetime.now() - timedelta(days = 365)
+            
+            article_nlp = article_nlp.filter(article__date_published__gte=filter_date)
+
+        negative_count = article_nlp.filter(sentiment__lt=-0.05).count()
+        neutral_count = article_nlp.filter(sentiment__gte=-0.05, sentiment__lte=0.05).count()
+        positive_count = article_nlp.filter(sentiment__gt=0.05).count()
 
         response = {
             'negative': negative_count,
@@ -349,14 +374,40 @@ class TopicViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
     # GET /api/topics/counts
+    # 
+    # Optional query params:
+    #   timeFrame - can having the following values [day, week, month, year]
+    #              this specifies whether the count should be for articles from the past day, week, etc.
+    #
+    # If not query param specified, it will count all the articles.
+    # 
     # retrieve the count of articles for each topic
     @action(methods=['GET'], detail=False)
     def counts(self, request):
+        articles = Article.objects.all()
+        query_params = request.query_params
+
+        # check if a time frame was given, if it doesn't match day, week, month or year it won't filter anything
+        if query_params.get('timeFrame'):
+            time_frame = query_params.get('timeFrame')
+            filter_date = datetime(1970, 1, 1) # default to this so if a valid value wasn't given for timeFrame, it won't filter anything
+
+            if time_frame == 'day':
+                filter_date = datetime.now() - timedelta(days = 1)
+            elif time_frame == 'week':
+                filter_date = datetime.now() - timedelta(days = 7)
+            elif time_frame == 'month':
+                filter_date = datetime.now() - timedelta(days = 30)
+            elif time_frame == 'year':
+                filter_date = datetime.now() - timedelta(days = 365)
+            
+            articles = articles.filter(date_published__gte=filter_date)
+
         response = {}
         topics = self.queryset
 
         for topic in topics:
-            article_count = Article.objects.filter(articlenlp__topic=topic.topic_id).count()
+            article_count = articles.filter(articlenlp__topic=topic.topic_id).count()
             response.update({
                 topic.topic_name: article_count
             })
