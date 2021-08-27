@@ -320,7 +320,14 @@ class SavedArticleViewset(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         data = request.data
         data['user'] = request.user.id # add the user id to the data to be saved
-        serializer = self.get_serializer(data=request.data)
+
+        # don't save the article if it is already saved by this user
+        saved_art = self.queryset.filter(user__id=request.data['user'], article__id=request.data['article'])
+
+        if saved_art.count() > 0:
+            return Response({'error': 'This article is already saved'})
+
+        serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
         headers = self.get_success_headers(serializer.data)

@@ -234,3 +234,51 @@ class ArticleViewSetTestCase(APITestCase):
             total_count += data['count']
 
         self.assertEqual(total_count, NUM_ARTICLES)
+
+    def test_get_article_count_by_sentiment_no_query_params(self):
+        resp = self.client.get('/api/article/count_by_sentiment')
+        data = json.loads(resp.content)
+
+        # ensure the response contains each type of sentiment
+        self.assertIn('negative', list(data.keys()))
+        self.assertIn('neutral', list(data.keys()))
+        self.assertIn('positive', list(data.keys()))
+
+        # ensure the total number of articles is correct
+        total_articles = 0
+        for key in data.keys():
+            total_articles += data[key]
+
+        self.assertEqual(total_articles, len(self.articles))
+
+
+    def test_get_article_count_by_sentiment_with_query_params(self):
+        time_frames = ['day', 'week', 'month', 'year']
+
+        for tf in time_frames:
+            resp = self.client.get(f'/api/article/count_by_sentiment?timeFrame={tf}')
+            data = json.loads(resp.content)
+
+            # ensure the response contains each type of sentiment
+            self.assertIn('negative', list(data.keys()))
+            self.assertIn('neutral', list(data.keys()))
+            self.assertIn('positive', list(data.keys()))
+
+    # this should behave the same as getting article counts with no query params
+    def test_get_article_count_by_sentiment_bad_query_params(self):
+        resp = self.client.get('/api/article/count_by_sentiment')
+        data = json.loads(resp.content)
+
+        # ensure the response contains each type of sentiment
+        self.assertIn('negative', list(data.keys()))
+        self.assertIn('neutral', list(data.keys()))
+        self.assertIn('positive', list(data.keys()))
+
+        # ensure the total number of articles is correct
+        total_articles = 0
+        for key in data.keys():
+            total_articles += data[key]
+
+        self.assertEqual(total_articles, len(self.articles))
+
+
