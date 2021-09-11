@@ -1,6 +1,7 @@
 from rest_framework import permissions
 from rest_framework import viewsets, status
 from rest_framework import pagination
+from rest_framework import response
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.decorators import action
@@ -285,6 +286,30 @@ class ArticleViewSet(viewsets.ViewSet):
         }
 
         return Response(response)
+
+    # /api/article/subjectivity_by_sentiment
+    # Retrieves the sentiment and subjectivity for all articles
+    # The reponse of this method is useful for creating viualizations.
+    # It returns a list in this format: 
+    # [
+    #   {x: <sentiment1>, y: <subjectivity>},
+    #   ...
+    # ]
+    @action(methods=['GET'], detail=False)
+    def subjectivity_by_sentiment(self, request):
+        article_nlp = ArticleNlp.objects.all()
+        res = []
+
+        for art in article_nlp:
+            res.append(
+                {
+                    'x': float(art.sentiment),
+                    'y': float(art.subjectivity)
+                }
+            )
+
+        return Response(res)
+
 
 # ModelViewSet includes methods to get objects, create, edit and delete by default.
 # Need to refine this so users can only delete their own saved articles. Also need
