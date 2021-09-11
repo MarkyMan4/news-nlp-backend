@@ -24,6 +24,35 @@ def get_article_nlp(article_nlp):
 
     return nlp
 
+# given a time frame of day, week, month or year, return the date that corresponds with that time frame
+def get_filter_date(timeframe):
+    filter_date = datetime(1970, 1, 1) # default to this so if a valid value wasn't given for timeFrame, it won't filter anything
+
+    if timeframe == 'day':
+        filter_date = datetime.now() - timedelta(days = 1)
+    elif timeframe == 'week':
+        filter_date = datetime.now() - timedelta(days = 7)
+    elif timeframe == 'month':
+        filter_date = datetime.now() - timedelta(days = 30)
+    elif timeframe == 'year':
+        filter_date = datetime.now() - timedelta(days = 365)
+
+    return filter_date
+
+# Applies date filtering to an ArticleNlp queryset.
+# Timeframe should be day, week, month or year. If it is any other value,
+# no filtering will be applied
+def filter_article_nlp_by_timeframe(article_nlp, timeframe):
+    filter_date = get_filter_date(timeframe)
+    
+    return article_nlp.filter(article__date_published__gte=filter_date)
+
+# same thing as filter_article_nlp_by_timeframe, but for an Article queryset
+def filter_articles_by_timeframe(articles, timeframe):
+    filter_date = get_filter_date(timeframe)
+    
+    return articles.filter(date_published__gte=filter_date)
+
 class ArticleViewSet(viewsets.ViewSet):
 
     # /api/article<optional query params>
@@ -261,19 +290,7 @@ class ArticleViewSet(viewsets.ViewSet):
 
         # check if a time frame was given, if it doesn't match day, week, month or year it won't filter anything
         if query_params.get('timeFrame'):
-            time_frame = query_params.get('timeFrame')
-            filter_date = datetime(1970, 1, 1) # default to this so if a valid value wasn't given for timeFrame, it won't filter anything
-
-            if time_frame == 'day':
-                filter_date = datetime.now() - timedelta(days = 1)
-            elif time_frame == 'week':
-                filter_date = datetime.now() - timedelta(days = 7)
-            elif time_frame == 'month':
-                filter_date = datetime.now() - timedelta(days = 30)
-            elif time_frame == 'year':
-                filter_date = datetime.now() - timedelta(days = 365)
-            
-            article_nlp = article_nlp.filter(article__date_published__gte=filter_date)
+            article_nlp = filter_article_nlp_by_timeframe(article_nlp, query_params.get('timeFrame'))
 
         negative_count = article_nlp.filter(sentiment__lt=-0.05).count()
         neutral_count = article_nlp.filter(sentiment__gte=-0.05, sentiment__lte=0.05).count()
@@ -295,10 +312,23 @@ class ArticleViewSet(viewsets.ViewSet):
     #   {x: <sentiment1>, y: <subjectivity>},
     #   ...
     # ]
+    # Optional query params:
+    #   timeFrame - can having the following values [day, week, month, year]
+    #              this specifies whether the count should be for articles from the past day, week, etc.
+    # TODO: allow this to be filtered by topic
     @action(methods=['GET'], detail=False)
     def subjectivity_by_sentiment(self, request):
         article_nlp = ArticleNlp.objects.all()
         res = []
+        query_params = request.query_params
+
+        print(len(article_nlp))
+
+        # check if a time frame was given, if it doesn't match day, week, month or year it won't filter anything
+        if query_params.get('timeFrame'):
+            article_nlp = filter_article_nlp_by_timeframe(article_nlp, query_params.get('timeFrame'))
+
+        print(len(article_nlp))
 
         for art in article_nlp:
             res.append(
@@ -421,19 +451,7 @@ class TopicViewSet(viewsets.ModelViewSet):
 
         # check if a time frame was given, if it doesn't match day, week, month or year it won't filter anything
         if query_params.get('timeFrame'):
-            time_frame = query_params.get('timeFrame')
-            filter_date = datetime(1970, 1, 1) # default to this so if a valid value wasn't given for timeFrame, it won't filter anything
-
-            if time_frame == 'day':
-                filter_date = datetime.now() - timedelta(days = 1)
-            elif time_frame == 'week':
-                filter_date = datetime.now() - timedelta(days = 7)
-            elif time_frame == 'month':
-                filter_date = datetime.now() - timedelta(days = 30)
-            elif time_frame == 'year':
-                filter_date = datetime.now() - timedelta(days = 365)
-            
-            articles = articles.filter(date_published__gte=filter_date)
+            articles = filter_articles_by_timeframe(articles, query_params.get('timeFrame'))
 
         response = {}
         topics = self.queryset
