@@ -281,4 +281,15 @@ class ArticleViewSetTestCase(APITestCase):
 
         self.assertEqual(total_articles, len(self.articles))
 
+    def test_subjectivity_by_sentiment_no_query_params(self):
+        resp = self.client.get('/api/article/subjectivity_by_sentiment')
+        data = json.loads(resp.content)
+
+        # make sure data was returned for all articles
+        self.assertEqual(len(data), NUM_ARTICLES)
+
+        # make sure each data point has an x and y
+        for d in data:
+            self.assertIn('x', d)
+            self.assertIn('y', d)
 

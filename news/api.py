@@ -322,13 +322,9 @@ class ArticleViewSet(viewsets.ViewSet):
         res = []
         query_params = request.query_params
 
-        print(len(article_nlp))
-
         # check if a time frame was given, if it doesn't match day, week, month or year it won't filter anything
         if query_params.get('timeFrame'):
             article_nlp = filter_article_nlp_by_timeframe(article_nlp, query_params.get('timeFrame'))
-
-        print(len(article_nlp))
 
         for art in article_nlp:
             res.append(
