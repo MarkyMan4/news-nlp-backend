@@ -293,3 +293,16 @@ class ArticleViewSetTestCase(APITestCase):
             self.assertIn('x', d)
             self.assertIn('y', d)
 
+    def test_subjectivity_by_sentiment_with_query_params(self):
+        time_frames = ['day', 'week', 'month', 'year']
+
+        for tf in time_frames:
+            resp = self.client.get(f'/api/article/subjectivity_by_sentiment?timeFrame={tf}')
+            data = json.loads(resp.content)
+
+            # make sure each data point has an x and y
+            for d in data:
+                self.assertIn('x', d)
+                self.assertIn('y', d)
+
+
