@@ -336,6 +336,54 @@ class ArticleViewSet(viewsets.ViewSet):
 
         return Response(res)
 
+    # /api/article/count_by_topic_date
+    # gets article count by date for each topic
+    # 
+    # response looks like this:
+    # {
+    #   "<topic name 1>": {
+    #       {"date": <date>, "count": <count>},
+    #       ...
+    #   }
+    #   "<topic name 2>": {
+    #       ...
+    #   }
+    #   ...
+    # }
+    @action(methods=['GET'], detail=False)
+    def count_by_topic_date(self, request):
+        counts = Article.objects.raw("""
+            select 
+                1 as id,
+                topic.topic_name,
+                substr(cast(art.date_published as varchar), 1, 10) as date,
+                count(*) as article_count
+            from 
+                news_article art
+                inner join news_articlenlp nlp
+                    on art.id = nlp .article_id
+                inner join news_topiclkp topic
+                    on nlp.topic = topic.topic_id
+            where
+                art.date_published > '2015-01-01'
+            group by 
+                topic.topic_name, 
+                substr(cast(art.date_published as varchar), 1, 10)
+            order by
+                substr(cast(art.date_published as varchar), 1, 10),
+                topic.topic_name
+        """)
+
+        response = {}
+
+        for count in counts:
+            if count.topic_name not in response:
+                response[count.topic_name] = []
+
+            response[count.topic_name].append({'date': count.date, 'count': count.article_count})
+
+        return Response(response)
+
 
 # ModelViewSet includes methods to get objects, create, edit and delete by default.
 # Need to refine this so users can only delete their own saved articles. Also need
