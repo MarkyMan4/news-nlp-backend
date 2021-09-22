@@ -352,7 +352,16 @@ class ArticleViewSet(viewsets.ViewSet):
     # }
     @action(methods=['GET'], detail=False)
     def count_by_topic_date(self, request):
-        counts = Article.objects.raw("""
+        query_params = request.query_params
+
+        filter_date = '2015-01-01' # default filter date, some articles don't have a date and default to 1970-01-01, so ignore these
+
+        # check if a time frame was given, if it doesn't match day, week, month or year it won't filter anything
+        if query_params.get('timeFrame'):
+            filter_date = get_filter_date(query_params.get('timeFrame'))
+            filter_date = filter_date.strftime('%Y-%m-%d')
+
+        sql = f"""
             select 
                 1 as id,
                 topic.topic_name,
@@ -365,14 +374,17 @@ class ArticleViewSet(viewsets.ViewSet):
                 inner join news_topiclkp topic
                     on nlp.topic = topic.topic_id
             where
-                art.date_published > '2015-01-01'
+                art.date_published >= '{filter_date}'
             group by 
                 topic.topic_name, 
                 substr(cast(art.date_published as varchar), 1, 10)
+                having count(*) < 40 -- some days I loaded a bunch of articles at once, ignore these since they are outliers
             order by
                 substr(cast(art.date_published as varchar), 1, 10),
                 topic.topic_name
-        """)
+        """
+
+        counts = Article.objects.raw(sql)
 
         response = {}
 
