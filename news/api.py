@@ -378,7 +378,7 @@ class ArticleViewSet(viewsets.ViewSet):
             group by 
                 topic.topic_name, 
                 substr(cast(art.date_published as varchar), 1, 10)
-                having count(*) < 25 -- some days I loaded a bunch of articles at once, ignore these since they are outliers
+                having count(*) < 30 -- some days I loaded a bunch of articles at once, ignore these since they are outliers
             order by
                 substr(cast(art.date_published as varchar), 1, 10),
                 topic.topic_name
