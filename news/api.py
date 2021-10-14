@@ -70,6 +70,7 @@ class ArticleViewSet(viewsets.ViewSet):
     #   9. topicName - only return articles with this topic
     #  10. order - Must be 'new' or 'old'. This determines if the results will be ordered from
     #              newest to oldest or oldest to newest. Default from newest to oldest.
+    #  11. headlineLike - return articles with a headline like this (case insensitive)
     def list(self, request):
         article_queryset = Article.objects.all().order_by('-date_published')
 
@@ -147,6 +148,9 @@ class ArticleViewSet(viewsets.ViewSet):
 
         if query_params.get('maxSubjectivity'):
             article_queryset = article_queryset.filter(articlenlp__subjectivity__lte=query_params.get('maxSubjectivity'))
+
+        if query_params.get('headlineLike'):
+            article_queryset = article_queryset.filter(headline__icontains=query_params.get('headlineLike'))
 
         if query_params.get('order'):
             # only need to handle case for sorting oldest to newest since it sorts by newest by default
