@@ -1,12 +1,13 @@
 from django.urls import path, include
 from rest_framework import routers
-from .api import ArticleViewSet, SavedArticleViewset, TopicViewSet
+from .api import ArticleViewSet, SavedArticleViewset, TopicViewSet, AnalysisView
 # from knox import views as knox_views
 
 router = routers.DefaultRouter(trailing_slash=False)
 router.register('api/article', ArticleViewSet, 'article-list')
 router.register('api/savearticle', SavedArticleViewset, 'save-article')
 router.register('api/topics', TopicViewSet, 'topic-list')
+router.register('api/analysis', AnalysisView, 'analysis')
 # router.register('api/articlenlp', ArticleNlpViewSet, 'articlenlp-retrieve')
 
 urlpatterns = [
