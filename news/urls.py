@@ -1,6 +1,9 @@
 from django.urls import path, include
 from rest_framework import routers
-from .api import ArticleViewSet, SavedArticleViewset, TopicViewSet, AnalysisView
+from .article_api import ArticleViewSet
+from .saved_article_api import SavedArticleViewset
+from .topic_api import TopicViewSet
+from .analysis_api import AnalysisView
 # from knox import views as knox_views
 
 router = routers.DefaultRouter(trailing_slash=False)

@@ -1,59 +1,19 @@
-from django.http.response import HttpResponseBadRequest
 from rest_framework import permissions
-from rest_framework import views, viewsets, status
-from rest_framework import pagination
-from rest_framework import response
+from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.decorators import action
 from django.shortcuts import get_object_or_404
-from .serializers import ArticleSerializer, ArticleNlpSerializer, SavedArticleSerializer, TopicSerializer
+from .serializers import ArticleSerializer, SavedArticleSerializer
 from .models import Article, ArticleNlp, SavedArticle, TopicLkp
+from .utils import get_article_nlp, get_filter_date, filter_article_nlp_by_timeframe
 
-from gensim.models.doc2vec import Doc2Vec, TaggedDocument
+from gensim.models.doc2vec import Doc2Vec
 import nltk
 from nltk.corpus import stopwords
-from textblob import TextBlob
 import pickle
 import string
-from datetime import datetime, timedelta
 
-# TODO: move this to a separate file with other utility functions
-def get_article_nlp(article_nlp):
-    nlp_serializer = ArticleNlpSerializer(article_nlp)
-    nlp = nlp_serializer.data
-    nlp['topic_name'] = article_nlp.topic.topic_name
-
-    return nlp
-
-# given a time frame of day, week, month or year, return the date that corresponds with that time frame
-def get_filter_date(timeframe):
-    filter_date = datetime(1970, 1, 1) # default to this so if a valid value wasn't given for timeFrame, it won't filter anything
-
-    if timeframe == 'day':
-        filter_date = datetime.now() - timedelta(days = 1)
-    elif timeframe == 'week':
-        filter_date = datetime.now() - timedelta(days = 7)
-    elif timeframe == 'month':
-        filter_date = datetime.now() - timedelta(days = 30)
-    elif timeframe == 'year':
-        filter_date = datetime.now() - timedelta(days = 365)
-
-    return filter_date
-
-# Applies date filtering to an ArticleNlp queryset.
-# Timeframe should be day, week, month or year. If it is any other value,
-# no filtering will be applied
-def filter_article_nlp_by_timeframe(article_nlp, timeframe):
-    filter_date = get_filter_date(timeframe)
-    
-    return article_nlp.filter(article__date_published__gte=filter_date)
-
-# same thing as filter_article_nlp_by_timeframe, but for an Article queryset
-def filter_articles_by_timeframe(articles, timeframe):
-    filter_date = get_filter_date(timeframe)
-    
-    return articles.filter(date_published__gte=filter_date)
 
 class ArticleViewSet(viewsets.ViewSet):
 
@@ -403,147 +363,4 @@ class ArticleViewSet(viewsets.ViewSet):
         return Response(response)
 
 
-# ModelViewSet includes methods to get objects, create, edit and delete by default.
-# Need to refine this so users can only delete their own saved articles. Also need
-# to only allow get, post and delete.
-class SavedArticleViewset(viewsets.ModelViewSet):
-    serializer_class = SavedArticleSerializer
-    permission_classes = [permissions.IsAuthenticated]
-    queryset = SavedArticle.objects.all()
-    http_method_names = ['get', 'post', 'delete'] # ModelViewSet includes many methods out of the box, so this limits them to only what is needed
 
-    # list all articles saved by the current user
-    def list(self, request):
-        # query the saved articles for this user
-        user_saved_articles = self.queryset.filter(user=request.user)
-        article_ids = [saved_article.article_id for saved_article in user_saved_articles]
-        articles = Article.objects.filter(id__in=article_ids)
-        
-        # serialize the result
-        article_serializer = ArticleSerializer(articles, many=True)
-        response_data = article_serializer.data
-
-        # add the NLP data to the response object
-        # this is duplicate code from ArticleViewSet, need to refactor this file to make this stuff more reusable
-        for article in response_data:
-            nlp_queryset = ArticleNlp.objects.filter(article_id=article['id'])
-            article_nlp = nlp_queryset.first()
-            article['nlp'] = get_article_nlp(article_nlp)
-        
-        return Response(response_data)
-
-    # save an article
-    # TODO: don't allow a user to save the same article more than once
-    def create(self, request, *args, **kwargs):
-        data = request.data
-        data['user'] = request.user.id # add the user id to the data to be saved
-
-        # don't save the article if it is already saved by this user
-        saved_art = self.queryset.filter(user__id=request.data['user'], article__id=request.data['article'])
-
-        if saved_art.count() > 0:
-            return Response({'error': 'This article is already saved'})
-
-        serializer = self.get_serializer(data=data)
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
-        headers = self.get_success_headers(serializer.data)
-        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
-
-    # can add custom functionality when saving here if needed
-    def perform_create(self, serializer):
-        serializer.save()
-
-    # only allow users to delete their own saved articles
-    # the pk should be an article ID, this method will then lookup the user ID
-    # since the user should not be allowed to save the same article more than once,
-    # this is guaranteed to be a unique combination
-    def destroy(self, request, pk):
-        article_to_delete = SavedArticle.objects.filter(user=request.user.id, article=pk)
-        response = {'result': 'you do not have permission to delete this saved article'}
-
-        if(article_to_delete.first().user_id == request.user.id):
-            article_to_delete.delete()
-            response = {'result': 'saved article deleted'}
-
-        return Response(response)
-
-    # GET /api/savearticle/<article id>/is_saved
-    # check if a given article is saved by the user
-    @action(methods=['GET'], detail=True)
-    def is_saved(self, request, pk):
-        res = {'result': False}
-        user_id = request.user.id
-        
-        try:
-            user_articles = SavedArticle.objects.filter(user_id=user_id, article_id=pk)
-
-            if len(user_articles) > 0:
-                res['result'] = True
-        except Exception as e:
-            print(e)
-
-        return Response(res)
-
-class TopicViewSet(viewsets.ModelViewSet):
-    serializer_class = TopicSerializer
-    queryset = TopicLkp.objects.all()
-    http_method_names = ['get']
-
-    # GET /api/topics
-    # list all topics
-    def list(self, request):
-        topics = self.queryset
-        serializer = self.get_serializer(topics, many=True)
-        return Response(serializer.data)
-
-    # GET /api/topics/counts
-    # 
-    # Optional query params:
-    #   timeFrame - can having the following values [day, week, month, year]
-    #              this specifies whether the count should be for articles from the past day, week, etc.
-    #
-    # If not query param specified, it will count all the articles.
-    # 
-    # retrieve the count of articles for each topic
-    @action(methods=['GET'], detail=False)
-    def counts(self, request):
-        articles = Article.objects.all()
-        query_params = request.query_params
-
-        # check if a time frame was given, if it doesn't match day, week, month or year it won't filter anything
-        if query_params.get('timeFrame'):
-            articles = filter_articles_by_timeframe(articles, query_params.get('timeFrame'))
-
-        response = {}
-        topics = self.queryset
-
-        for topic in topics:
-            article_count = articles.filter(articlenlp__topic=topic.topic_id).count()
-            response.update({
-                topic.topic_name: article_count
-            })
-
-        return Response(response)
-
-class AnalysisView(viewsets.ViewSet):
-
-    # POST /api/analysis/get_sentiment
-    # body of request must be:
-    #   {"text": "<text data>"}
-    @action(methods=['POST'], detail=False)
-    def get_sentiment(self, request):
-        # request body must contain "text"
-        if 'text' not in request.data:
-            return Response({'error': 'must supply text'}, status=status.HTTP_400_BAD_REQUEST)
-        
-        # "text" must be a string
-        if type(request.data['text']) != str:
-            return Response({'error': 'text must be a string'}, status=status.HTTP_400_BAD_REQUEST)
-        
-        blob = TextBlob(request.data['text'])
-
-        return Response({
-            'sentiment': blob.sentiment.polarity,
-            'subjectivity': blob.sentiment.subjectivity
-        })
