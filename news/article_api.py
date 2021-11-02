@@ -1,12 +1,14 @@
-from rest_framework import permissions
-from rest_framework import viewsets, status
+from rest_framework import viewsets
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.decorators import action
+from django.contrib.staticfiles.storage import staticfiles_storage
 from django.shortcuts import get_object_or_404
-from .serializers import ArticleSerializer, SavedArticleSerializer
-from .models import Article, ArticleNlp, SavedArticle, TopicLkp
+from .serializers import ArticleSerializer
+from .models import Article, ArticleNlp, TopicLkp
 from .utils import get_article_nlp, get_filter_date, filter_article_nlp_by_timeframe
+from backend import settings
+import os
 
 from gensim.models.doc2vec import Doc2Vec
 import nltk
@@ -156,7 +158,7 @@ class ArticleViewSet(viewsets.ViewSet):
     # given a list of tags, lookup the headline in the tag_lookup object
     def get_headlines_by_tags(self, tags):
         # load the tag lookup
-        with open('news/models/tag_lookup.pickle', 'rb') as f:
+        with open(os.path.join(settings.STATIC_ROOT, 'tag_lookup.pickle'), 'rb') as f:
             tag_lookup = pickle.load(f)
 
         headlines = []
@@ -193,8 +195,10 @@ class ArticleViewSet(viewsets.ViewSet):
         if request.query_params.get('numResults') and request.query_params.get('numResults').isnumeric():
             num_results = int(request.query_params.get('numResults')) + 1 # need to add one since the first result is always the same article
 
+        print(os.path.join(settings.STATIC_ROOT, 'headline_model'))
+
         # load the doc2vec model
-        model = Doc2Vec.load('news/models/headline_model')
+        model = Doc2Vec.load(os.path.join(settings.STATIC_ROOT, 'headline_model'))
 
         # retrieve the headline from the database, return error if the pk doesn't exist
         article = Article.objects.filter(pk=pk).first()
