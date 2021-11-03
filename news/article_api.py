@@ -195,8 +195,6 @@ class ArticleViewSet(viewsets.ViewSet):
         if request.query_params.get('numResults') and request.query_params.get('numResults').isnumeric():
             num_results = int(request.query_params.get('numResults')) + 1 # need to add one since the first result is always the same article
 
-        print(os.path.join(settings.STATIC_ROOT, 'headline_model'))
-
         # load the doc2vec model
         model = Doc2Vec.load(os.path.join(settings.STATIC_ROOT, 'headline_model'))
 
