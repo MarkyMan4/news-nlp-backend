@@ -168,5 +168,5 @@ class AnalysisView(viewsets.ViewSet):
         top_ten = sorted(swapped_key_and_vals)[-1:-11:-1]
         top_ten_terms = [item[1] for item in top_ten]
 
-        return ';'.join(top_ten_terms) # list should be semi-colon separated values
+        return top_ten_terms
         
