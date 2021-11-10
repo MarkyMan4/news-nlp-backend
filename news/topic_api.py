@@ -1,9 +1,10 @@
+from datetime import time
 from rest_framework import viewsets
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from .serializers import TopicSerializer
 from .models import Article, TopicLkp
-from .utils import filter_articles_by_timeframe
+from .utils import filter_articles_by_timeframe, get_counts_by_topic
 
 
 class TopicViewSet(viewsets.ModelViewSet):
@@ -31,18 +32,8 @@ class TopicViewSet(viewsets.ModelViewSet):
     def counts(self, request):
         articles = Article.objects.all()
         query_params = request.query_params
+        timeframe = query_params.get('timeFrame')
 
-        # check if a time frame was given, if it doesn't match day, week, month or year it won't filter anything
-        if query_params.get('timeFrame'):
-            articles = filter_articles_by_timeframe(articles, query_params.get('timeFrame'))
+        counts = get_counts_by_topic(articles, timeframe)
 
-        response = {}
-        topics = self.queryset
-
-        for topic in topics:
-            article_count = articles.filter(articlenlp__topic=topic.topic_id).count()
-            response.update({
-                topic.topic_name: article_count
-            })
-
-        return Response(response)
+        return Response(counts)

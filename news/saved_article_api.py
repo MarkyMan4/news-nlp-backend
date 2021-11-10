@@ -1,10 +1,11 @@
+from datetime import time
 from rest_framework import permissions
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from .serializers import ArticleSerializer, SavedArticleSerializer
 from .models import Article, ArticleNlp, SavedArticle
-from .utils import get_article_nlp
+from .utils import get_article_nlp, get_counts_by_topic
 
 
 # ModelViewSet includes methods to get objects, create, edit and delete by default.
@@ -88,3 +89,18 @@ class SavedArticleViewset(viewsets.ModelViewSet):
             print(e)
 
         return Response(res)
+
+    @action(methods=['GET'], detail=False)
+    def count_by_topic(self, request):
+        # get saved articles for the current user
+        user_saved_articles = self.queryset.filter(user=request.user)
+        article_ids = [saved_article.article_id for saved_article in user_saved_articles]
+        articles = Article.objects.filter(id__in=article_ids)
+
+        # Retrieve the query param. if nothing was provided, this will be None
+        query_params = request.query_params
+        timeframe = query_params.get('timeFrame')
+
+        counts = get_counts_by_topic(articles, timeframe)
+
+        return Response(counts)
