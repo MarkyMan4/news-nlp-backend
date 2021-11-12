@@ -6,7 +6,7 @@ from django.contrib.staticfiles.storage import staticfiles_storage
 from django.shortcuts import get_object_or_404
 from .serializers import ArticleSerializer
 from .models import Article, ArticleNlp, TopicLkp
-from .utils import get_article_nlp, get_filter_date, filter_article_nlp_by_timeframe
+from .utils import get_article_nlp, get_filter_date, filter_article_nlp_by_timeframe, get_counts_by_sentiment
 from backend import settings
 import os
 
@@ -253,24 +253,12 @@ class ArticleViewSet(viewsets.ViewSet):
     # If not query param specified, it will count all the articles.
     @action(methods=['GET'], detail=False)
     def count_by_sentiment(self, request):
-        article_nlp = ArticleNlp.objects.all()
+        articles = Article.objects.all()
         query_params = request.query_params
+        print(query_params.get('timeFrame'))
+        counts = get_counts_by_sentiment(articles, query_params.get('timeFrame'))
 
-        # check if a time frame was given, if it doesn't match day, week, month or year it won't filter anything
-        if query_params.get('timeFrame'):
-            article_nlp = filter_article_nlp_by_timeframe(article_nlp, query_params.get('timeFrame'))
-
-        negative_count = article_nlp.filter(sentiment__lt=-0.05).count()
-        neutral_count = article_nlp.filter(sentiment__gte=-0.05, sentiment__lte=0.05).count()
-        positive_count = article_nlp.filter(sentiment__gt=0.05).count()
-
-        response = {
-            'negative': negative_count,
-            'neutral': neutral_count,
-            'positive': positive_count
-        }
-
-        return Response(response)
+        return Response(counts)
 
     # /api/article/subjectivity_by_sentiment
     # Retrieves the sentiment and subjectivity for all articles

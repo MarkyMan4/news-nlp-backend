@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from .serializers import ArticleSerializer, SavedArticleSerializer
 from .models import Article, ArticleNlp, SavedArticle
-from .utils import get_article_nlp, get_counts_by_topic
+from .utils import get_article_nlp, get_counts_by_topic, get_counts_by_sentiment
 
 
 # ModelViewSet includes methods to get objects, create, edit and delete by default.
@@ -90,17 +90,34 @@ class SavedArticleViewset(viewsets.ModelViewSet):
 
         return Response(res)
 
-    @action(methods=['GET'], detail=False)
-    def count_by_topic(self, request):
+    def get_saved_articles(self, user):
         # get saved articles for the current user
-        user_saved_articles = self.queryset.filter(user=request.user)
+        user_saved_articles = self.queryset.filter(user=user)
         article_ids = [saved_article.article_id for saved_article in user_saved_articles]
         articles = Article.objects.filter(id__in=article_ids)
+
+        return articles
+
+    @action(methods=['GET'], detail=False)
+    def count_by_topic(self, request):
+        articles = self.get_saved_articles(request.user)
 
         # Retrieve the query param. if nothing was provided, this will be None
         query_params = request.query_params
         timeframe = query_params.get('timeFrame')
 
         counts = get_counts_by_topic(articles, timeframe)
+
+        return Response(counts)
+
+    @action(methods=['GET'], detail=False)
+    def count_by_sentiment(self, request):
+        articles = self.get_saved_articles(request.user)
+
+        # Retrieve the query param. if nothing was provided, this will be None
+        query_params = request.query_params
+        timeframe = query_params.get('timeFrame')
+
+        counts = get_counts_by_sentiment(articles, timeframe)
 
         return Response(counts)

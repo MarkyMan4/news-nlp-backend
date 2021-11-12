@@ -67,3 +67,26 @@ def get_counts_by_topic(articles: Article, timeframe: str = None):
         })
 
     return counts
+
+def get_counts_by_sentiment(articles: Article, timeframe: str = None):
+    # check if a time frame was given, if it doesn't match day, week, month or year it won't filter anything
+    if timeframe:
+        articles = filter_articles_by_timeframe(articles, timeframe)
+
+    # get list of IDs from the filtered set of articles
+    article_ids = articles.values_list('id')
+
+    # get NLP info for all the articles provided
+    article_nlp = ArticleNlp.objects.filter(article_id__in=article_ids)
+
+    negative_count = article_nlp.filter(sentiment__lt=-0.05).count()
+    neutral_count = article_nlp.filter(sentiment__gte=-0.05, sentiment__lte=0.05).count()
+    positive_count = article_nlp.filter(sentiment__gt=0.05).count()
+
+    counts = {
+        'negative': negative_count,
+        'neutral': neutral_count,
+        'positive': positive_count
+    }
+
+    return counts
