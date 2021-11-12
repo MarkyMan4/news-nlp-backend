@@ -69,6 +69,18 @@ def get_counts_by_topic(articles: Article, timeframe: str = None):
     return counts
 
 def get_counts_by_sentiment(articles: Article, timeframe: str = None):
+    """
+    Get a count of articles for each sentiment (positive, neutral, negative)
+
+    Args:
+        articles (Article): Filtered or unfiltered queryset of articles to find the counts for
+        timeframe (str): Timeframe to filter articles by.
+                         Can having the following values [day, week, month, year]
+                         This specifies whether the count should be for articles from the past day, week, etc.
+
+    Returns:
+        dict: counts for each sentiment
+    """
     # check if a time frame was given, if it doesn't match day, week, month or year it won't filter anything
     if timeframe:
         articles = filter_articles_by_timeframe(articles, timeframe)
@@ -90,3 +102,44 @@ def get_counts_by_sentiment(articles: Article, timeframe: str = None):
     }
 
     return counts
+
+def get_subjectivity_by_sentiment(articles: Article, timeframe: str = None):
+    """
+    Gets subjectivity and sentiment for all articles
+
+    Args:
+        articles (Article): Filtered or unfiltered queryset of articles to find the counts for
+        timeframe (str): Timeframe to filter articles by.
+                         Can having the following values [day, week, month, year]
+                         This specifies whether the count should be for articles from the past day, week, etc.
+
+    Returns:
+        list: list of dictionaries where the keys in each dictionary and x and y. The keys are left generic on
+              purpose since this data is meant to be used on a graph. x is sentiment and y is subjectivity
+
+            [
+                {x: <sentiment1>, y: <subjectivity>},
+                ...
+            ]
+    """
+    # check if a time frame was given, if it doesn't match day, week, month or year it won't filter anything
+    if timeframe:
+        articles = filter_articles_by_timeframe(articles, timeframe)
+
+    # get list of IDs from the filtered set of articles
+    article_ids = articles.values_list('id')
+
+    # get NLP info for all the articles provided
+    article_nlp = ArticleNlp.objects.filter(article_id__in=article_ids)
+
+    values = []
+
+    for art in article_nlp:
+        values.append(
+            {
+                'x': float(art.sentiment),
+                'y': float(art.subjectivity)
+            }
+        )
+
+    return values

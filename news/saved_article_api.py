@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from .serializers import ArticleSerializer, SavedArticleSerializer
 from .models import Article, ArticleNlp, SavedArticle
-from .utils import get_article_nlp, get_counts_by_topic, get_counts_by_sentiment
+from .utils import get_article_nlp, get_counts_by_topic, get_counts_by_sentiment, get_subjectivity_by_sentiment
 
 
 # ModelViewSet includes methods to get objects, create, edit and delete by default.
@@ -98,6 +98,15 @@ class SavedArticleViewset(viewsets.ModelViewSet):
 
         return articles
 
+    # GET /api/savearticle/count_by_topic
+    # 
+    # Optional query params:
+    #   timeFrame - can having the following values [day, week, month, year]
+    #              this specifies whether the count should be for articles from the past day, week, etc.
+    #
+    # If not query param specified, it will count all the articles.
+    # 
+    # retrieve the count of articles for each topic
     @action(methods=['GET'], detail=False)
     def count_by_topic(self, request):
         articles = self.get_saved_articles(request.user)
@@ -110,6 +119,17 @@ class SavedArticleViewset(viewsets.ModelViewSet):
 
         return Response(counts)
 
+    # /api/savearticle/count_by_sentiment
+    # gets the article count for each sentiment
+    # breakdown as follows:
+    #   -1.0 <= sentiment < -0.05   -- negative
+    #   -0.05 <= sentiment <= 0.05   -- neutral
+    #   0.05 < sentiment <= 1.0     -- positive
+    # Optional query params:
+    #   timeFrame - can having the following values [day, week, month, year]
+    #              this specifies whether the count should be for articles from the past day, week, etc.
+    #
+    # If not query param specified, it will count all the articles.
     @action(methods=['GET'], detail=False)
     def count_by_sentiment(self, request):
         articles = self.get_saved_articles(request.user)
@@ -121,3 +141,27 @@ class SavedArticleViewset(viewsets.ModelViewSet):
         counts = get_counts_by_sentiment(articles, timeframe)
 
         return Response(counts)
+
+    # /api/savearticle/subjectivity_by_sentiment
+    # Retrieves the sentiment and subjectivity for all articles
+    # The reponse of this method is useful for creating viualizations.
+    # It returns a list in this format: 
+    # [
+    #   {x: <sentiment1>, y: <subjectivity>},
+    #   ...
+    # ]
+    # Optional query params:
+    #   timeFrame - can having the following values [day, week, month, year]
+    #              this specifies whether the count should be for articles from the past day, week, etc.
+    # TODO: allow this to be filtered by topic
+    @action(methods=['GET'], detail=False)
+    def subjectivity_by_sentiment(self, request):
+        articles = self.get_saved_articles(request.user)
+
+        # Retrieve the query param. if nothing was provided, this will be None
+        query_params = request.query_params
+        timeframe = query_params.get('timeFrame')
+
+        values = get_subjectivity_by_sentiment(articles, timeframe)
+
+        return Response(values)

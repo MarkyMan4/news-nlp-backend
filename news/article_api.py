@@ -6,7 +6,7 @@ from django.contrib.staticfiles.storage import staticfiles_storage
 from django.shortcuts import get_object_or_404
 from .serializers import ArticleSerializer
 from .models import Article, ArticleNlp, TopicLkp
-from .utils import get_article_nlp, get_filter_date, filter_article_nlp_by_timeframe, get_counts_by_sentiment
+from .utils import get_article_nlp, get_filter_date, filter_article_nlp_by_timeframe, get_counts_by_sentiment, get_subjectivity_by_sentiment
 from backend import settings
 import os
 
@@ -255,7 +255,6 @@ class ArticleViewSet(viewsets.ViewSet):
     def count_by_sentiment(self, request):
         articles = Article.objects.all()
         query_params = request.query_params
-        print(query_params.get('timeFrame'))
         counts = get_counts_by_sentiment(articles, query_params.get('timeFrame'))
 
         return Response(counts)
@@ -274,23 +273,11 @@ class ArticleViewSet(viewsets.ViewSet):
     # TODO: allow this to be filtered by topic
     @action(methods=['GET'], detail=False)
     def subjectivity_by_sentiment(self, request):
-        article_nlp = ArticleNlp.objects.all()
-        res = []
+        articles = Article.objects.all()
         query_params = request.query_params
+        values = get_subjectivity_by_sentiment(articles, query_params.get('timeFrame'))
 
-        # check if a time frame was given, if it doesn't match day, week, month or year it won't filter anything
-        if query_params.get('timeFrame'):
-            article_nlp = filter_article_nlp_by_timeframe(article_nlp, query_params.get('timeFrame'))
-
-        for art in article_nlp:
-            res.append(
-                {
-                    'x': float(art.sentiment),
-                    'y': float(art.subjectivity)
-                }
-            )
-
-        return Response(res)
+        return Response(values)
 
     # /api/article/count_by_topic_date
     # gets article count by date for each topic
