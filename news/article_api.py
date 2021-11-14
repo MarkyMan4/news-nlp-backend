@@ -6,7 +6,7 @@ from django.contrib.staticfiles.storage import staticfiles_storage
 from django.shortcuts import get_object_or_404
 from .serializers import ArticleSerializer
 from .models import Article, ArticleNlp, TopicLkp
-from .utils import get_article_nlp, get_filter_date, filter_article_nlp_by_timeframe, get_counts_by_sentiment, get_subjectivity_by_sentiment
+from .utils import get_article_nlp, get_counts_by_sentiment, get_subjectivity_by_sentiment, get_counts_by_date_per_topic
 from backend import settings
 import os
 
@@ -296,48 +296,9 @@ class ArticleViewSet(viewsets.ViewSet):
     @action(methods=['GET'], detail=False)
     def count_by_topic_date(self, request):
         query_params = request.query_params
+        counts_by_date = get_counts_by_date_per_topic(query_params.get('timeFrame'))
 
-        filter_date = '2015-01-01' # default filter date, some articles don't have a date and default to 1970-01-01, so ignore these
-
-        # check if a time frame was given, if it doesn't match day, week, month or year it won't filter anything
-        if query_params.get('timeFrame'):
-            filter_date = get_filter_date(query_params.get('timeFrame'))
-            filter_date = filter_date.strftime('%Y-%m-%d')
-
-        sql = f"""
-            select 
-                1 as id,
-                topic.topic_name,
-                substr(cast(art.date_published as varchar), 1, 10) as date,
-                count(*) as article_count
-            from 
-                news_article art
-                inner join news_articlenlp nlp
-                    on art.id = nlp .article_id
-                inner join news_topiclkp topic
-                    on nlp.topic = topic.topic_id
-            where
-                art.date_published >= '{filter_date}'
-            group by 
-                topic.topic_name, 
-                substr(cast(art.date_published as varchar), 1, 10)
-                having count(*) < 30 -- some days I loaded a bunch of articles at once, ignore these since they are outliers
-            order by
-                substr(cast(art.date_published as varchar), 1, 10),
-                topic.topic_name
-        """
-
-        counts = Article.objects.raw(sql)
-
-        response = {}
-
-        for count in counts:
-            if count.topic_name not in response:
-                response[count.topic_name] = []
-
-            response[count.topic_name].append({'date': count.date, 'count': count.article_count})
-
-        return Response(response)
+        return Response(counts_by_date)
 
 
 

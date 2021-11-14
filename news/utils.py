@@ -1,7 +1,7 @@
 # Helper functions used by various API endpoints
 from .serializers import ArticleNlpSerializer
 from datetime import datetime, timedelta
-from news.models import Article, ArticleNlp, TopicLkp
+from news.models import Article, ArticleNlp, SavedArticle, TopicLkp
 
 
 def get_article_nlp(article_nlp: ArticleNlp):
@@ -143,3 +143,61 @@ def get_subjectivity_by_sentiment(articles: Article, timeframe: str = None):
         )
 
     return values
+
+def get_counts_by_date_per_topic(timeframe: str = None, user_id: int = None):
+    """
+    Gets counts over time for each of the topics
+
+    Args:
+        articles (Article): Filtered or unfiltered queryset of articles to find the counts for
+        timeframe (str): Timeframe to filter articles by.
+                         Can having the following values [day, week, month, year]
+                         This specifies whether the count should be for articles from the past day, week, etc.
+        user_id (int): Optionally a user id can be provided. If this is supplied, the will only retrieve the results
+                       for articles that are saved by this user
+
+    Returns:
+        dict: eac hkey is a topic and the value is list of counts for each date
+    """
+    filter_date = '2015-01-01' # default filter date, some articles don't have a date and default to 1970-01-01, so ignore these
+
+    # check if a time frame was given, if it doesn't match day, week, month or year it won't filter anything
+    if timeframe:
+        filter_date = get_filter_date(timeframe)
+        filter_date = filter_date.strftime('%Y-%m-%d')
+
+    sql = f"""
+        select 
+            1 as id,
+            topic.topic_name,
+            substr(cast(art.date_published as varchar), 1, 10) as date,
+            count(*) as article_count
+        from 
+            news_article art
+            inner join news_articlenlp nlp
+                on art.id = nlp.article_id
+            inner join news_topiclkp topic
+                on nlp.topic = topic.topic_id
+        where
+            art.date_published >= '{filter_date}'
+            {f'and art.id in (select article_id from news_savedarticle where user_id = {user_id})' if user_id else ''}
+        group by 
+            topic.topic_name, 
+            substr(cast(art.date_published as varchar), 1, 10)
+            having count(*) < 30 -- some days I loaded a bunch of articles at once, ignore these since they are outliers
+        order by
+            substr(cast(art.date_published as varchar), 1, 10),
+            topic.topic_name
+    """
+
+    counts = Article.objects.raw(sql)
+
+    counts_by_date = {}
+
+    for count in counts:
+        if count.topic_name not in counts_by_date:
+            counts_by_date[count.topic_name] = []
+
+        counts_by_date[count.topic_name].append({'date': count.date, 'count': count.article_count})
+
+    return counts_by_date

@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from .serializers import ArticleSerializer, SavedArticleSerializer
 from .models import Article, ArticleNlp, SavedArticle
-from .utils import get_article_nlp, get_counts_by_topic, get_counts_by_sentiment, get_subjectivity_by_sentiment
+from .utils import get_article_nlp, get_counts_by_topic, get_counts_by_sentiment, get_subjectivity_by_sentiment, get_counts_by_date_per_topic
 
 
 # ModelViewSet includes methods to get objects, create, edit and delete by default.
@@ -165,3 +165,25 @@ class SavedArticleViewset(viewsets.ModelViewSet):
         values = get_subjectivity_by_sentiment(articles, timeframe)
 
         return Response(values)
+
+    # /api/savearticle/count_by_topic_date
+    # gets article count by date for each topic
+    # 
+    # response looks like this:
+    # {
+    #   "<topic name 1>": {
+    #       {"date": <date>, "count": <count>},
+    #       ...
+    #   }
+    #   "<topic name 2>": {
+    #       ...
+    #   }
+    #   ...
+    # }
+    @action(methods=['GET'], detail=False)
+    def count_by_topic_date(self, request):
+        user_id =  request.user.id
+        query_params = request.query_params
+        counts_by_date = get_counts_by_date_per_topic(query_params.get('timeFrame'), user_id)
+
+        return Response(counts_by_date)
