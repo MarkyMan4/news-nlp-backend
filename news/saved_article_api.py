@@ -98,6 +98,19 @@ class SavedArticleViewset(viewsets.ModelViewSet):
 
         return articles
 
+    # POST /api/savearticle/clear_saved_articles
+    # deletes all saved articles for the user
+    @action(methods=['POST'], detail=False)
+    def clear_saved_articles(self, request):
+        response = {'result': 'all saved articles deleted'}
+
+        try:
+            self.queryset.filter(user=request.user).delete()
+        except:
+            response = {'error': 'failed to clear saved articles'}
+
+        return Response(response)
+
     # GET /api/savearticle/count_by_topic
     # 
     # Optional query params:
