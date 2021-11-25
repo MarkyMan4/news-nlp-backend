@@ -40,7 +40,7 @@ def filter_articles_by_timeframe(articles: Article, timeframe: str):
     
     return articles.filter(date_published__gte=filter_date)
 
-def get_counts_by_topic(articles: Article, timeframe: str = None):
+def get_counts_by_topic(articles: Article, timeframe: str = None, topic: str = None):
     """
     Get a count of articles for each topic.
 
@@ -49,6 +49,7 @@ def get_counts_by_topic(articles: Article, timeframe: str = None):
         timeframe (str): Timeframe to filter articles by.
                          Can having the following values [day, week, month, year]
                          This specifies whether the count should be for articles from the past day, week, etc.
+        topic (str): If specified, will only retrieve the article count for that topic
 
     Returns:
         dict: counts for each topic
@@ -57,14 +58,22 @@ def get_counts_by_topic(articles: Article, timeframe: str = None):
     if timeframe:
         articles = filter_articles_by_timeframe(articles, timeframe)
 
+    # if a topic was specified, only return count for that topic, else get counts for all topics
     counts = {}
-    topics = TopicLkp.objects.all()
 
-    for topic in topics:
-        article_count = articles.filter(articlenlp__topic=topic.topic_id).count()
+    if topic:
+        articles = articles.filter(articlenlp__topic__topic_name=topic)
         counts.update({
-            topic.topic_name: article_count
+            topic: articles.count()
         })
+    else:
+        topics = TopicLkp.objects.all()
+
+        for topic in topics:
+            article_count = articles.filter(articlenlp__topic=topic.topic_id).count()
+            counts.update({
+                topic.topic_name: article_count
+            })
 
     return counts
 

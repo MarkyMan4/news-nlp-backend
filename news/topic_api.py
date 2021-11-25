@@ -33,7 +33,8 @@ class TopicViewSet(viewsets.ModelViewSet):
         articles = Article.objects.all()
         query_params = request.query_params
         timeframe = query_params.get('timeFrame')
+        topic = query_params.get('topic')
 
-        counts = get_counts_by_topic(articles, timeframe)
+        counts = get_counts_by_topic(articles, timeframe, topic)
 
         return Response(counts)
