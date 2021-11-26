@@ -255,7 +255,9 @@ class ArticleViewSet(viewsets.ViewSet):
     def count_by_sentiment(self, request):
         articles = Article.objects.all()
         query_params = request.query_params
-        counts = get_counts_by_sentiment(articles, query_params.get('timeFrame'))
+        timeframe = query_params.get('timeFrame')
+        topic = query_params.get('topic')
+        counts = get_counts_by_sentiment(articles, timeframe, topic)
 
         return Response(counts)
 
@@ -275,7 +277,9 @@ class ArticleViewSet(viewsets.ViewSet):
     def subjectivity_by_sentiment(self, request):
         articles = Article.objects.all()
         query_params = request.query_params
-        values = get_subjectivity_by_sentiment(articles, query_params.get('timeFrame'))
+        timeframe = query_params.get('timeFrame')
+        topic = query_params.get('topic')
+        values = get_subjectivity_by_sentiment(articles, timeframe, topic)
 
         return Response(values)
 

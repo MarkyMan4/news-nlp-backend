@@ -77,7 +77,7 @@ def get_counts_by_topic(articles: Article, timeframe: str = None, topic: str = N
 
     return counts
 
-def get_counts_by_sentiment(articles: Article, timeframe: str = None):
+def get_counts_by_sentiment(articles: Article, timeframe: str = None, topic: str = None):
     """
     Get a count of articles for each sentiment (positive, neutral, negative)
 
@@ -86,6 +86,7 @@ def get_counts_by_sentiment(articles: Article, timeframe: str = None):
         timeframe (str): Timeframe to filter articles by.
                          Can having the following values [day, week, month, year]
                          This specifies whether the count should be for articles from the past day, week, etc.
+        topic (str): If specified, will only retrieve the article count for that topic
 
     Returns:
         dict: counts for each sentiment
@@ -93,6 +94,9 @@ def get_counts_by_sentiment(articles: Article, timeframe: str = None):
     # check if a time frame was given, if it doesn't match day, week, month or year it won't filter anything
     if timeframe:
         articles = filter_articles_by_timeframe(articles, timeframe)
+
+    if topic:
+        articles = articles.filter(articlenlp__topic__topic_name=topic)
 
     # get list of IDs from the filtered set of articles
     article_ids = articles.values_list('id')
@@ -112,7 +116,7 @@ def get_counts_by_sentiment(articles: Article, timeframe: str = None):
 
     return counts
 
-def get_subjectivity_by_sentiment(articles: Article, timeframe: str = None):
+def get_subjectivity_by_sentiment(articles: Article, timeframe: str = None, topic: str = None):
     """
     Gets subjectivity and sentiment for all articles
 
@@ -121,6 +125,7 @@ def get_subjectivity_by_sentiment(articles: Article, timeframe: str = None):
         timeframe (str): Timeframe to filter articles by.
                          Can having the following values [day, week, month, year]
                          This specifies whether the count should be for articles from the past day, week, etc.
+        topic (str): If specified, will only retrieve the article count for that topic
 
     Returns:
         list: list of dictionaries where the keys in each dictionary and x and y. The keys are left generic on
@@ -134,6 +139,9 @@ def get_subjectivity_by_sentiment(articles: Article, timeframe: str = None):
     # check if a time frame was given, if it doesn't match day, week, month or year it won't filter anything
     if timeframe:
         articles = filter_articles_by_timeframe(articles, timeframe)
+
+    if topic:
+        articles = articles.filter(articlenlp__topic__topic_name=topic)
 
     # get list of IDs from the filtered set of articles
     article_ids = articles.values_list('id')
