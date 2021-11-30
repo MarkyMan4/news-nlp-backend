@@ -300,7 +300,9 @@ class ArticleViewSet(viewsets.ViewSet):
     @action(methods=['GET'], detail=False)
     def count_by_topic_date(self, request):
         query_params = request.query_params
-        counts_by_date = get_counts_by_date_per_topic(query_params.get('timeFrame'))
+        timeframe = query_params.get('timeFrame')
+        topic = query_params.get('topic')
+        counts_by_date = get_counts_by_date_per_topic(timeframe, topic)
 
         return Response(counts_by_date)
 

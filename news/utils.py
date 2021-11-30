@@ -161,7 +161,7 @@ def get_subjectivity_by_sentiment(articles: Article, timeframe: str = None, topi
 
     return values
 
-def get_counts_by_date_per_topic(timeframe: str = None, user_id: int = None):
+def get_counts_by_date_per_topic(timeframe: str = None, topic: str = None, user_id: int = None):
     """
     Gets counts over time for each of the topics
 
@@ -170,6 +170,7 @@ def get_counts_by_date_per_topic(timeframe: str = None, user_id: int = None):
         timeframe (str): Timeframe to filter articles by.
                          Can having the following values [day, week, month, year]
                          This specifies whether the count should be for articles from the past day, week, etc.
+        topic (str): If specified, will only retrieve dates/counts for that topic
         user_id (int): Optionally a user id can be provided. If this is supplied, the will only retrieve the results
                        for articles that are saved by this user
 
@@ -198,6 +199,7 @@ def get_counts_by_date_per_topic(timeframe: str = None, user_id: int = None):
         where
             art.date_published >= '{filter_date}'
             {f'and art.id in (select article_id from news_savedarticle where user_id = {user_id})' if user_id else ''}
+            {f"and topic.topic_name = '{topic}'" if topic else ""}
         group by 
             topic.topic_name, 
             substr(cast(art.date_published as varchar), 1, 10)
