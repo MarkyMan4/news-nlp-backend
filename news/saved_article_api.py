@@ -127,8 +127,9 @@ class SavedArticleViewset(viewsets.ModelViewSet):
         # Retrieve the query param. if nothing was provided, this will be None
         query_params = request.query_params
         timeframe = query_params.get('timeFrame')
+        topic = query_params.get('topic')
 
-        counts = get_counts_by_topic(articles, timeframe)
+        counts = get_counts_by_topic(articles, timeframe, topic)
 
         return Response(counts)
 
@@ -150,8 +151,9 @@ class SavedArticleViewset(viewsets.ModelViewSet):
         # Retrieve the query param. if nothing was provided, this will be None
         query_params = request.query_params
         timeframe = query_params.get('timeFrame')
+        topic = query_params.get('topic')
 
-        counts = get_counts_by_sentiment(articles, timeframe)
+        counts = get_counts_by_sentiment(articles, timeframe, topic)
 
         return Response(counts)
 
@@ -174,8 +176,9 @@ class SavedArticleViewset(viewsets.ModelViewSet):
         # Retrieve the query param. if nothing was provided, this will be None
         query_params = request.query_params
         timeframe = query_params.get('timeFrame')
+        topic = query_params.get('topic')
 
-        values = get_subjectivity_by_sentiment(articles, timeframe)
+        values = get_subjectivity_by_sentiment(articles, timeframe, topic)
 
         return Response(values)
 
