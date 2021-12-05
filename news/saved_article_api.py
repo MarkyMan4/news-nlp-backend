@@ -200,6 +200,9 @@ class SavedArticleViewset(viewsets.ModelViewSet):
     def count_by_topic_date(self, request):
         user_id =  request.user.id
         query_params = request.query_params
-        counts_by_date = get_counts_by_date_per_topic(query_params.get('timeFrame'), user_id)
+        timeframe = query_params.get('timeFrame')
+        topic = query_params.get('topic')
+
+        counts_by_date = get_counts_by_date_per_topic(timeframe, topic, user_id)
 
         return Response(counts_by_date)
