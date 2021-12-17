@@ -156,7 +156,8 @@ def get_subjectivity_by_sentiment(articles: Article, timeframe: str = None, topi
             {
                 'x': float(art.sentiment),
                 'y': float(art.subjectivity),
-                'id': art.article.id
+                'id': art.article.id,
+                'topic': art.topic.topic_name
             }
         )
 
