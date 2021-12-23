@@ -207,14 +207,6 @@ class ArticleViewSetTestCase(APITestCase):
 
         self.assertEqual(ids1, ids2)
 
-    def test_list_topics(self):
-        response = self.client.get('/api/topics')
-        data = json.loads(response.content)
-
-        for i in range(len(data)):
-            self.assertEqual(data[i]['topic_id'], i)
-            self.assertEqual(data[i]['topic_name'], f'topic {i}')
-
     # test that the count of articles is accurate
     def test_get_article_counts(self):
         resp = self.client.get('/api/article/get_article_count')
@@ -224,7 +216,7 @@ class ArticleViewSetTestCase(APITestCase):
         self.assertEqual(count, NUM_ARTICLES)
 
     # test that the sum of counts for each topic is equal to the total number of articles
-    def test_get_article_count_by_topic(self):
+    def test_get_article_count_for_topic(self):
         total_count = 0
 
         for i in range(NUM_TOPICS):
@@ -306,3 +298,70 @@ class ArticleViewSetTestCase(APITestCase):
                 self.assertIn('y', d)
 
 
+class TopicViewSetTestCase(APITestCase):
+    # add dummy data to the test database
+    def setUp(self):
+        self.articles = []
+        self.topics = []
+        self.topic_counts = {}
+
+        date = datetime(2021, 11, 30)
+
+        # create 500 articles
+        for i in range(NUM_ARTICLES):
+            article = Article.objects.create(
+                post_id = f'{i}',
+                post_title = f'test title {i}',
+                url = 'www.article.com',
+                score = i,
+                publisher = 'test publisher',
+                headline = 'some very important news',
+                date_published = date.strftime('%Y-%m-%d'),
+                content = 'sf asf asfl;kjasf; aslkjf owjnef opwnfoenqwf iowbnfwiofbn wfnqwe fn wfn asdf'
+            )
+
+            self.articles.append(article)
+            date -= timedelta(days=1)
+
+        # create 4 topics
+        for i in range(NUM_TOPICS):
+            topic = TopicLkp.objects.create(
+                topic_id=i,
+                topic_name=f'topic {i}'
+            )
+
+            self.topics.append(topic)
+
+        # create an nlp entry for each article
+        for article in self.articles:
+            ArticleNlp.objects.create(
+                article=article,
+                topic=self.topics[int(random() * len(self.topics))], # random topic
+                sentiment=random() * (-1 if random() > 0.5 else 1), # between -1 and 1
+                subjectivity=random(), # between 0 and 1
+                keywords='asdf;asdf;asdf;asdf;asdf;asdf;asdf;asdf;asdf;asdf'
+            )
+
+        # store the correct counts of articles for each topic
+        # key = topic name, value = article count
+        for topic in self.topics:
+            self.topic_counts.update({
+                topic.topic_name: ArticleNlp.objects.filter(topic__id=topic.id).count()
+            })
+
+    # list topics and make sure the topic names/ids match up with the seeded data
+    def test_list_topics(self):
+        response = self.client.get('/api/topics')
+        data = json.loads(response.content)
+
+        for i in range(len(data)):
+            self.assertEqual(data[i]['topic_id'], i)
+            self.assertEqual(data[i]['topic_name'], f'topic {i}')
+
+    # test the counts for articles of each topic
+    def test_get_article_counts_by_topic(self):
+        resp = self.client.get('/api/topics/counts')
+        data = json.loads(resp.content)
+
+        for topic in data.keys():
+            self.assertEqual(data[topic], self.topic_counts[topic])
