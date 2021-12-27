@@ -306,5 +306,19 @@ class ArticleViewSet(viewsets.ViewSet):
 
         return Response(counts_by_date)
 
+    # /api/article/publishers
+    # list all publishers that exist in the database
+    @action(methods=['GET'], detail=False)
+    def publishers(self, request):
+        publisher_queryset = Article.objects.values('publisher').distinct()
+        
+        # format for response by making it a list of publishers and wrapping it in JSON
+        publishers = [p['publisher'] for p in publisher_queryset]
+        publishers.sort()
+        
+        res = {
+            'publishers': publishers
+        }
 
+        return Response(res)
 
