@@ -244,7 +244,9 @@ class ArticleViewSetTestCase(APITestCase):
         self.assertEqual(total_articles, len(self.articles))
 
 
+    # test getting count by sentiment while providing timeframe and topic
     def test_get_article_count_by_sentiment_with_query_params(self):
+        # test with timeFrame
         time_frames = ['day', 'week', 'month', 'year']
 
         for tf in time_frames:
@@ -255,6 +257,18 @@ class ArticleViewSetTestCase(APITestCase):
             self.assertIn('negative', list(data.keys()))
             self.assertIn('neutral', list(data.keys()))
             self.assertIn('positive', list(data.keys()))
+
+        # test with topic
+        topic_id = 1
+        topic_name = 'topic 1'
+        resp = self.client.get(f'/api/article/count_by_sentiment?topic={topic_name}')
+        data = json.loads(resp.content)
+
+        # compare the number of articles with topic 1 to the count of articles from the response
+        actual_total = data['negative'] + data['neutral'] + data['positive']
+        expected_total = ArticleNlp.objects.filter(topic__topic_id=topic_id).count()
+
+        self.assertEqual(actual_total, expected_total)
 
     # this should behave the same as getting article counts with no query params
     def test_get_article_count_by_sentiment_bad_query_params(self):
