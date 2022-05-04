@@ -379,3 +379,211 @@ class TopicViewSetTestCase(APITestCase):
 
         for topic in data.keys():
             self.assertEqual(data[topic], self.topic_counts[topic])
+
+class AnalysisViewSetTestCase(APITestCase):
+    # add dummy data to the test database
+    def setUp(self):
+        self.articles = []
+        self.topics = []
+        self.topic_counts = {}
+
+        date = datetime(2021, 11, 30)
+
+        # create 500 articles
+        for i in range(NUM_ARTICLES):
+            article = Article.objects.create(
+                post_id = f'{i}',
+                post_title = f'test title {i}',
+                url = 'www.article.com',
+                score = i,
+                publisher = 'test publisher',
+                headline = 'some very important news',
+                date_published = date.strftime('%Y-%m-%d'),
+                content = 'sf asf asfl;kjasf; aslkjf owjnef opwnfoenqwf iowbnfwiofbn wfnqwe fn wfn asdf'
+            )
+
+            self.articles.append(article)
+            date -= timedelta(days=1)
+
+        # create 4 topics
+        for i in range(NUM_TOPICS):
+            topic = TopicLkp.objects.create(
+                topic_id=i,
+                topic_name=f'topic {i}'
+            )
+
+            self.topics.append(topic)
+
+        # create an nlp entry for each article
+        for article in self.articles:
+            ArticleNlp.objects.create(
+                article=article,
+                topic=self.topics[int(random() * len(self.topics))], # random topic
+                sentiment=random() * (-1 if random() > 0.5 else 1), # between -1 and 1
+                subjectivity=random(), # between 0 and 1
+                keywords='asdf;asdf;asdf;asdf;asdf;asdf;asdf;asdf;asdf;asdf'
+            )
+
+        # store the correct counts of articles for each topic
+        # key = topic name, value = article count
+        for topic in self.topics:
+            self.topic_counts.update({
+                topic.topic_name: ArticleNlp.objects.filter(topic__id=topic.id).count()
+            })
+
+    def test_positive_sentiment_analysis(self):
+        data = {
+            'text': 'I think dogs are good'
+        }
+
+        resp = self.client.post('/api/analysis/get_sentiment', data=data)
+        resp_data = json.loads(resp.content)
+
+        self.assertGreater(resp_data['sentiment'], 0)
+
+    def test_negative_sentiment_analysis(self):
+        data = {
+            'text': 'I think dogs are bad'
+        }
+
+        resp = self.client.post('/api/analysis/get_sentiment', data=data)
+        resp_data = json.loads(resp.content)
+
+        self.assertLess(resp_data['sentiment'], 0)
+
+    def test_get_keywords(self):
+        data = {
+            'text': 'the quick brown fox jumped over the lazy dog'
+        }
+
+        resp = self.client.post('/api/analysis/get_keywords', data=data)
+        resp_data = json.loads(resp.content)
+
+        self.assertGreater(len(resp_data), 0)
+
+    def test_get_topic_probability(self):
+        data = {
+            'text': 'This new technology is really cool'
+        }
+
+        response = self.client.get('/api/article', data=data)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+class SavedArticleViewSetTestCase(APITestCase):
+    # add dummy data to the test database
+    def setUp(self):
+        self.articles = []
+        self.topics = []
+        self.topic_counts = {}
+
+        date = datetime(2021, 11, 30)
+
+        # create 500 articles
+        for i in range(NUM_ARTICLES):
+            article = Article.objects.create(
+                post_id = f'{i}',
+                post_title = f'test title {i}',
+                url = 'www.article.com',
+                score = i,
+                publisher = 'test publisher',
+                headline = 'some very important news',
+                date_published = date.strftime('%Y-%m-%d'),
+                content = 'sf asf asfl;kjasf; aslkjf owjnef opwnfoenqwf iowbnfwiofbn wfnqwe fn wfn asdf'
+            )
+
+            self.articles.append(article)
+            date -= timedelta(days=1)
+
+        # create 4 topics
+        for i in range(NUM_TOPICS):
+            topic = TopicLkp.objects.create(
+                topic_id=i,
+                topic_name=f'topic {i}'
+            )
+
+            self.topics.append(topic)
+
+        # create an nlp entry for each article
+        for article in self.articles:
+            ArticleNlp.objects.create(
+                article=article,
+                topic=self.topics[int(random() * len(self.topics))], # random topic
+                sentiment=random() * (-1 if random() > 0.5 else 1), # between -1 and 1
+                subjectivity=random(), # between 0 and 1
+                keywords='asdf;asdf;asdf;asdf;asdf;asdf;asdf;asdf;asdf;asdf'
+            )
+
+        # store the correct counts of articles for each topic
+        # key = topic name, value = article count
+        for topic in self.topics:
+            self.topic_counts.update({
+                topic.topic_name: ArticleNlp.objects.filter(topic__id=topic.id).count()
+            })
+    
+    def test_save_article(self):
+        # register for an account
+        creds = {
+            'username': 'test_user',
+            'email': 'testing@test.com',
+            'password': 'verysecurepwd'
+        }
+
+        reg_resp = self.client.post('/api/auth/register', data=creds)
+        resp_data = json.loads(reg_resp.content)
+        token = resp_data['token']
+
+        # save an article
+        art_to_save = Article.objects.first()
+        data = {
+            'article': art_to_save.id
+        }
+
+        resp = self.client.post(
+            '/api/savearticle', 
+            data=json.dumps(data),
+            content_type='application/json', 
+            HTTP_AUTHORIZATION=f'Token {token}'
+        )
+
+        resp_data = json.loads(resp.content)
+
+        self.assertEqual(resp_data['article'], art_to_save.id)
+
+    def test_delete_saved_article(self):
+        # register for an account
+        creds = {
+            'username': 'test_user',
+            'email': 'testing@test.com',
+            'password': 'verysecurepwd'
+        }
+
+        reg_resp = self.client.post('/api/auth/register', data=creds)
+        resp_data = json.loads(reg_resp.content)
+        token = resp_data['token']
+
+        # save an article
+        data = {
+            'article': 1
+        }
+
+        save_resp = self.client.post(
+            '/api/savearticle', 
+            data=json.dumps(data),
+            content_type='application/json', 
+            HTTP_AUTHORIZATION=f'Token {token}'
+        )
+
+        save_resp_data = json.loads(save_resp.content)
+        saved_article_id = save_resp_data['id']
+
+        # delete the saved article
+        resp = self.client.delete(
+            f'/api/savearticle/{saved_article_id}', 
+            content_type='application/json', 
+            HTTP_AUTHORIZATION=f'Token {token}'
+        )
+
+        resp_data = json.loads(resp.content)
+
+        self.assertEqual(resp_data['result'], 'saved article deleted')
